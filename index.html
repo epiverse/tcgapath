@@ -9,36 +9,62 @@
     <h2>Embedding Text Example</h2>
     <div>
         <h3>Original Text:</h3>
-        <p id="originalText"></p>
+        <p id="originalText">TCGA-BP-5195.25c0b433-5557-4165-922e-2c1eac9c26f0, Date of Receipt: Clinical Diagnosis & History: Incidental 3 cm left upper pole renal mass. Specimens Submitted: 1: Kidney, Left Upper Pole</p>
     </div>
 
     <div>
         <h3>Embedding:</h3>
-        <pre id="embedding"></pre>
+        <pre id="embedding">getEmbedding('TCGA-BP-5195.25c0b433-5557-4165-922e-2c1eac9c26f0, Date of Receipt: Clinical Diagnosis & History: Incidental 3 cm left upper pole renal mass. Specimens Submitted: 1: Kidney, Left Upper Pole')</pre>
     </div>
 
     <h2>Upload Excel File to be embedded</h2>
 
-    <!-- File Upload for Excel -->
     <div>
         <h3>Upload Excel File:</h3>
         <input type="file" id="upload" accept=".xlsx, .xls" />
     </div>
 
+    <h1>CSV Embedding Example</h1>
+    <div>
+        <h3>Status:</h3>
+        <pre id="status">Waiting for CSV processing...</pre>
+    </div>
+
+    <div>
+        <h3>Download Embeddings:</h3>
+        <button id="download" disabled>Download Embeddings</button>
+    </div>
+
     <script>
-        // Function to get embedding (assuming it is defined in index.js)
+        // Function to get embedding using Gemini API
         async function getEmbedding(text) {
-            const response = await (new (await import('https://episphere.github.io/gemini/gem.mjs')).GEM()).embed('TCGA-BP-5195.25c0b433-5557-4165-922e-2c1eac9c26f0, Date of Receipt: Clinical Diagnosis & History: Incidental 3 cm left upper pole renal mass. Specimens Submitted: 1: Kidney, Left Upper Pole')
-
-            if (!response.ok) {
-                throw new Error('Error retrieving embedding');
+            try {
+                const gemini = new (await import('https://episphere.github.io/gemini/gem.mjs')).GEM();
+                const embedding = await gemini.embed(text);
+                return embedding;
+            } catch (error) {
+                console.error('Error retrieving embedding:', error);
+                return null;  // Return null in case of an error
             }
-
-            const data = await response.json();
-            return data.embedding;
         }
 
-        // Event listener for file upload
+        // Function to display the embedding result on the webpage
+        function displayEmbedding(embedding) {
+            if (embedding) {
+                document.getElementById('embedding').textContent = JSON.stringify(embedding, null, 2);
+            } else {
+                document.getElementById('embedding').textContent = 'Error generating embedding.';
+            }
+        }
+
+        // Embed the predefined text on page load
+        document.addEventListener('DOMContentLoaded', async () => {
+            const text = document.getElementById('originalText').textContent;
+            const embedding = await getEmbedding(text);
+            displayEmbedding(embedding);
+        });
+
+        // Event listener for file upload to process the Excel file
         document.getElementById('upload').addEventListener('change', handleFile, false);
 
         function handleFile(event) {
@@ -52,14 +78,12 @@
                 const worksheet = workbook.Sheets[sheetName];
                 const json = XLSX.utils.sheet_to_json(worksheet);
 
-                const firstRowText = json[0]?.text; // Adjust column key
+                const firstRowText = json[0]?.text;  // Adjust this column key if necessary
                 document.getElementById('originalText').textContent = firstRowText;
 
                 if (firstRowText) {
                     getEmbedding(firstRowText)
-                        .then(embedding => {
-                            document.getElementById('embedding').textContent = JSON.stringify(embedding, null, 2);
-                        })
+                        .then(embedding => displayEmbedding(embedding))
                         .catch(error => {
                             console.error('Error retrieving embedding:', error);
                         });
@@ -68,6 +92,70 @@
 
             reader.readAsArrayBuffer(file);
         }
+
+    // Helper to download the embeddings as a JSON file
+    function downloadJSON(data, filename = 'embeddings.json') {
+            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = filename;
+            link.click();
+        }
+
+        // Function to get embedding using Gemini API
+        async function getEmbedding(text) {
+            try {
+                const gemini = new (await import('https://episphere.github.io/gemini/gem.mjs')).GEM();
+                const embedding = await gemini.embed(text);
+                return embedding;
+            } catch (error) {
+                console.error('Error retrieving embedding:', error);
+                return null;
+            }
+        }
+
+        // Function to process the CSV data from Base64
+        async function processCSV(base64) {
+            const binaryString = window.atob(base64);
+            const data = new Uint8Array(binaryString.length);
+            for (let i = 0; i < binaryString.length; i++) {
+                data[i] = binaryString.charCodeAt(i);
+            }
+
+            const text = new TextDecoder("utf-8").decode(data);
+            const rows = text.split("\n").map(row => row.split(",")); // Split into rows and then by commas
+
+            const embeddings = [];
+            const statusEl = document.getElementById('status');
+
+            for (let i = 0; i < rows.length; i++) {
+                const textToEmbed = rows[i][0]; // Assuming text to embed is in the first column
+                statusEl.textContent = `Processing row ${i + 1} of ${rows.length}`;
+
+                const embedding = await getEmbedding(textToEmbed);
+                embeddings.push({ text: textToEmbed, embedding: embedding });
+
+                // Throttle the requests to avoid hitting rate limits
+                await new Promise(resolve => setTimeout(resolve, 1000));  // 1 second delay between requests
+            }
+
+            statusEl.textContent = `Finished embedding ${rows.length} rows.`;
+            document.getElementById('download').disabled = false;
+
+            return embeddings;
+        }
+
+        // Base64 string of your CSV file
+        const base64CSV = "YOUR_BASE64_STRING_HERE"; // Replace with your actual Base64 string
+
+        // Start processing the CSV file
+        processCSV(base64CSV).then(embeddings => {
+            // Store embeddings and enable download button
+            document.getElementById('download').onclick = function() {
+                downloadJSON(embeddings);
+            };
+        });
+
     </script>
 </body>
 </html>
