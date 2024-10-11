@@ -102,18 +102,6 @@
             link.click();
         }
 
-        // Function to get embedding using Gemini API
-        async function getEmbedding(text) {
-            try {
-                const gemini = new (await import('https://episphere.github.io/gemini/gem.mjs')).GEM();
-                const embedding = await gemini.embed(text);
-                return embedding;
-            } catch (error) {
-                console.error('Error retrieving embedding:', error);
-                return null;
-            }
-        }
-
         // Function to process the CSV data from Base64
         async function processCSV(base64) {
             const binaryString = window.atob(base64);
