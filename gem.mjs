@@ -15,6 +15,7 @@ function validKey(key) {
     }
     return vKey
 }
+
 class GEM {
     constructor(key) {
         this.loadedAt = Date()
@@ -60,5 +61,4 @@ class GEM {
         }
     }
 }
-
 export {GEM,validKey}

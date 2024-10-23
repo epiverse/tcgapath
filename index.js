@@ -1,167 +1,21 @@
 console.log(`index.js loaded\n${Date()}`);
 
-// dependencies
-
-//saveFile = (await import('https://jonasalmeida.github.io/jmat/jmat.mjs')).saveFile
-
-// application
-
 (async function() {
-    const saveFile = (await import('https://jonasalmeida.github.io/jmat/jmat.mjs')).saveFile
-    let conversation = []
-    // system prompt?
+    const saveFile = (await import('https://jonasalmeida.github.io/jmat/jmat.mjs')).saveFile;
+    let conversation = [];
     console.log(`async runtime\n${Date()}`);
-    const shdown = new ((await import('https://esm.sh/showdown@2.1.0')).default).Converter
-    GEM = (await import(`${location.href}gem.mjs`)).GEM
-    g1 = new GEM
+    const shdown = new ((await import('https://esm.sh/showdown@2.1.0')).default).Converter;
 
-    provideKey.onclick = function() {
-        localStorage.gemKey = prompt(`please provide your API key, you can find it at https://aistudio.google.com/app/apikey`)
-    }
+    // Import GEM and instantiate it
+    const { GEM } = await import(`./gem.mjs`);
+    g1 = new GEM(); // Initialize g1 here
 
-    showInfo.onchange = function() {
-        if (showInfo.checked) {
-            divList.hidden = false
-        } else {
-            divList.hidden = true
-        }
-    }
+    // Now that g1 is initialized, call the functions
+    await initializeEmbeddings(); // Call the function to initialize embeddings
+})();
 
-    embed.onclick = async function() {
-        let n = conversation.length
-        promptTextArea.value = '...'
-        if (embedQ.checked) {
-            let ebs = await g1.embed(conversation[n - 2]);
-            promptTextArea.value = JSON.stringify(ebs)
-            console.log('Q', conversation[n - 2])
-        }
-        if (embedA.checked) {
-            let ebs = await g1.embed(conversation[n - 1]);
-            promptTextArea.value = JSON.stringify(ebs)
-            console.log('A', conversation[n - 1])
-        }
-        if (embedQA.checked) {
-            let ebs = await g1.embed(conversation.slice(n - 2, n).join(' , '));
-            promptTextArea.value = JSON.stringify(ebs)
-            console.log('QA', conversation.slice(n - 2, n))
-        }
-        if (embedQAs.checked) {
-            let ebs = await g1.embed(conversation.join(' , '));
-            promptTextArea.value = JSON.stringify(ebs)
-            console.log('QAs', conversation)
-        }
-    }
-
-    toFile.onclick = function() {
-        saveFile(promptTextArea.value, [...document.getElementsByName('embedTarget')].filter(x => x.checked)[0].id + '.json')
-    }
-
-    toMemory.onclick = function() {
-        let txt = promptTextArea.value
-        navigator.clipboard.writeText(txt)
-        toMemory.style.backgroundColor = 'lime'
-        setTimeout(function() {
-            toMemory.style.backgroundColor = ''
-        }, 300)
-    }
-
-    reset.onclick = function() {
-        location.href = location.href
-    }
-
-    clear.onclick=function(){
-        promptTextArea.value=''
-    }
-
-    promptTextArea.onkeydown = async function(ev) {
-        //promptTextArea.focus()
-        if ((ev.key == 'Enter') & (!ev.shiftKey)) {
-            //console.log(`Enter at ${Date()}`,ev)
-            let div = document.createElement('div')
-            responseDiv.appendChild(div)
-            conversation.push(promptTextArea.value)
-            div.innerHTML = `<span style="color:DarkGreen">${promptTextArea.value}</span>`
-            //let res = await g1.post(promptTextArea.value);
-            let res = await g1.post(conversation.join(' ; '));
-            promptTextArea.value = '...'
-            div.innerHTML += `<p style="color:blue">${shdown.makeHtml(res.candidates[0].content.parts[0].text)}</p><hr>`
-            conversation.push(res.candidates[0].content.parts[0].text)
-            promptTextArea.value = ''
-            promptTextArea.focus()
-            console.log(res.candidates, conversation)
-        }
-    }
-}
-)();
-
-// Function to get embedding using Gemini API
-// async function getEmbedding(text) {
-//     try {
-//         const gemini = new (await import('https://episphere.github.io/gemini/gem.mjs')).GEM();
-//         const embedding = await gemini.embed(text);
-//         return embedding;
-//     } catch (error) {
-//         console.error('Error retrieving embedding:', error);
-//         return null;  // Return null in case of an error
-//     }
-// }
-
-// // Function to display the single embedding result on the webpage
-// function displaySingleEmbedding(embedding) {
-//     if (embedding) {
-//         document.getElementById('singleEmbedding').textContent = JSON.stringify(embedding, null, 2);
-//     } else {
-//         document.getElementById('singleEmbedding').textContent = 'Error generating embedding.';
-//     }
-// }
-
-// Function to get embedding using Gemini API
-async function getEmbedding(text) {
-    try {
-        //const gemini = new (await import('https://episphere.github.io/gemini/gem.mjs')).GEM();
-        const embedding = await g1.embed(text);
-        return embedding;
-    } catch (error) {
-        console.error('Error retrieving embedding:', error);
-        return null;  // Return null in case of an error
-    }
-}
-
-// Function to display the single embedding result on the webpage
-function displaySingleEmbedding(embedding) {
-    if (embedding) {
-        document.getElementById('singleEmbedding').textContent = JSON.stringify(embedding, null, 2);
-    } else {
-        document.getElementById('singleEmbedding').textContent = 'Error generating embedding.';
-    }
-}
-
-// Function to get batch embeddings using Gemini API
-async function getBatchEmbeddings(texts) {
-    try {
-        const gemini = new (await import('https://episphere.github.io/gemini/gem.mjs')).GEM();
-        // Map the texts to the required format for the Gemini API
-        const formattedTexts = texts.map(text => ({ "text": text }));
-        const embeddings = await gemini.embed(formattedTexts);
-        console.log("Batch embeddings retrieved successfully:", embeddings);
-        return embeddings;  // Don't forget to return the embeddings
-    } catch (error) {
-        console.error('Error retrieving batch embeddings:', error);
-        return null; // Return null in case of an error
-    }
-}
-
-// Function to display the batch embedding results on the webpage
-function displayBatchEmbeddings(embeddings) {
-    if (embeddings) {
-        document.getElementById('batchEmbeddings').textContent = JSON.stringify(embeddings, null, 2);
-    } else {
-        document.getElementById('batchEmbeddings').textContent = 'Error generating batch embeddings. Check console for details.';
-    }
-}
-
-// On page load, first get the embedding for a specific text
-document.addEventListener('DOMContentLoaded', async () => {
+// Function to initialize embeddings after g1 is set up
+async function initializeEmbeddings() {
     const specificText = 'TCGA-BP-5195.25c0b433-5557-4165-922e-2c1eac9c26f0, Date of Receipt: Clinical Diagnosis & History: Incidental 3 cm left upper pole renal mass. Specimens Submitted: 1: Kidney, Left Upper Pole';
 
     // Display a loading message while fetching the single embedding
@@ -184,4 +38,90 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Get batch embeddings for the texts
     const batchEmbeddings = await getBatchEmbeddings(texts);
     displayBatchEmbeddings(batchEmbeddings);
-});
+}
+
+// Function to get embedding using Gemini API
+async function getEmbedding(text) {
+    try {
+        // Use the existing instance of g1
+        const embedding = await g1.embed(text);
+        return embedding;
+    } catch (error) {
+        console.error('Error retrieving embedding:', error);
+        return null;  // Return null in case of an error
+    }
+}
+
+// Function to display the single embedding result on the webpage
+function displaySingleEmbedding(embedding) {
+    if (embedding) {
+        document.getElementById('singleEmbedding').textContent = JSON.stringify(embedding, null, 2);
+    } else {
+        document.getElementById('singleEmbedding').textContent = 'Error generating embedding.';
+    }
+}
+
+//Function
+async function getBatchEmbeddings(texts) {
+    try {
+        // Format the requests for the API
+        const requests = texts.map(text => ({
+            model: "models/text-embedding-004",
+            content: {
+                parts: [{
+                    text: text
+                }]
+            }
+        }));
+
+        // Make the API call with the correct payload structure
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/text-embedding-004:batchEmbedContents?key=${localStorage.gemKey}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ requests: requests }) // Wrap requests in an object
+        });
+
+        // Parse the JSON response
+        const embeddingsData = await response.json();
+
+        // Log the entire response for debugging
+        console.log("Full API Response:", embeddingsData);
+
+        // Check if the response contains an error
+        if (embeddingsData.error) {
+            throw new Error(`API error: ${embeddingsData.error.message}`);
+        }
+
+        // Check if the 'embeddings' array exists
+        if (!embeddingsData.embeddings || embeddingsData.embeddings.length === 0) {
+            console.error("API Response Missing 'embeddings' Key:", embeddingsData); // Log the full response
+            throw new Error("No embeddings in the API response.");
+        }
+
+        // Extract the embedding values from the 'embeddings' array
+        const values = embeddingsData.embeddings.map((embedding, index) => embedding.values);
+
+        console.log("Batch embeddings retrieved successfully:", values);
+        return values;  // Return the extracted values array
+    } catch (error) {
+        console.error('Error retrieving batch embeddings:', error);
+        return null; // Return null in case of an error
+    }
+}
+
+
+// Function to display the batch embedding results on the webpage
+function displayBatchEmbeddings(embeddings) {
+    if (embeddings && Array.isArray(embeddings)) {
+        // Create a formatted string to display each embedding
+        const formattedEmbeddings = embeddings.map((embedding, index) => 
+            `Embedding for text ${index + 1}: ${JSON.stringify(embedding, null, 2)}`
+        ).join('\n\n'); // Join the embeddings with double newlines for better readability
+        
+        document.getElementById('batchEmbeddings').textContent = formattedEmbeddings;
+    } else {
+        document.getElementById('batchEmbeddings').textContent = 'Error generating batch embeddings. Check console for details.';
+    }
+}
