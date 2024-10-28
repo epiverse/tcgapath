@@ -7,7 +7,7 @@ console.log(`index.js loaded\n${Date()}`);
     const shdown = new ((await import('https://esm.sh/showdown@2.1.0')).default).Converter;
 
     // Import GEM and instantiate it
-    const { GEM } = await import(`./gem.mjs`);
+    const { GEM } = await import(`./gem.mjs`); // import {GEM,validKey} from './gem.mjs' ???
     g1 = new GEM(); // Initialize g1 here
 
     // Now that g1 is initialized, call the functions
@@ -116,10 +116,10 @@ async function getBatchEmbeddings(texts) {
 function displayBatchEmbeddings(embeddings) {
     if (embeddings && Array.isArray(embeddings)) {
         // Create a formatted string to display each embedding
-        const formattedEmbeddings = embeddings.map((embedding, index) => 
+        const formattedEmbeddings = embeddings.map((embedding, index) =>
             `Embedding for text ${index + 1}: ${JSON.stringify(embedding, null, 2)}`
         ).join('\n\n'); // Join the embeddings with double newlines for better readability
-        
+
         document.getElementById('batchEmbeddings').textContent = formattedEmbeddings;
     } else {
         document.getElementById('batchEmbeddings').textContent = 'Error generating batch embeddings. Check console for details.';
