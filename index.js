@@ -25,12 +25,8 @@ async function initializeEmbeddings() {
     const singleEmbedding = await getEmbedding(specificText);
     displaySingleEmbedding(singleEmbedding);
 
-    // After displaying the single embedding, fetch batch embeddings
-    const texts = [
-        "What is the meaning of life?",
-        "How much wood would a woodchuck chuck?",
-        "How does the brain work?"
-    ];
+    // Fetch batch embeddings from the JSON file
+    const texts = await fetchTextsFromJson('tcgareports.json');
 
     // Display a loading message while fetching batch embeddings
     document.getElementById('batchEmbeddings').textContent = 'Fetching batch embeddings...';
@@ -61,7 +57,7 @@ function displaySingleEmbedding(embedding) {
     }
 }
 
-//Function
+//Function for batch embeddings
 async function getBatchEmbeddings(texts) {
     try {
         // Format the requests for the API
