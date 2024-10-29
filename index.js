@@ -7,7 +7,7 @@ console.log(`index.js loaded\n${Date()}`);
     const shdown = new ((await import('https://esm.sh/showdown@2.1.0')).default).Converter;
 
     // Import GEM and instantiate it
-    const { GEM } = await import(`./gem.mjs`); // import {GEM,validKey} from './gem.mjs' ???
+    const { GEM } = await import(`./gem.mjs`);
     g1 = new GEM(); // Initialize g1 here
 
     // Now that g1 is initialized, call the functions
@@ -36,7 +36,25 @@ async function initializeEmbeddings() {
     displayBatchEmbeddings(batchEmbeddings);
 }
 
-// Function to get embedding using Gemini API
+// Function to fetch texts from the JSON file
+async function fetchTextsFromJson(filePath) {
+    try {
+        const response = await fetch(filePath);
+
+        // Check if the response is ok
+        if (!response.ok) {
+            throw new Error('Network response was not ok');
+        }
+
+        // Parse and return the JSON data
+        return await response.json();
+    } catch (error) {
+        console.error('Error fetching the JSON file:', error);
+        return []; // Return an empty array in case of an error
+    }
+}
+
+// Function to get embedding using GEM API
 async function getEmbedding(text) {
     try {
         // Use the existing instance of g1
@@ -57,66 +75,68 @@ function displaySingleEmbedding(embedding) {
     }
 }
 
-//Function for batch embeddings
-async function getBatchEmbeddings(texts) {
+// Function to get batch embeddings with chunking to stay within payload limits
+async function getBatchEmbeddings(texts, chunkSize = 50) {
+    const allEmbeddings = []; // Store embeddings from all chunks
+
     try {
-        // Format the requests for the API
-        const requests = texts.map(text => ({
-            model: "models/text-embedding-004",
-            content: {
-                parts: [{
-                    text: text
-                }]
+        // Split the texts array into smaller chunks
+        for (let i = 0; i < texts.length; i += chunkSize) {
+            const chunk = texts.slice(i, i + chunkSize);
+
+            // Prepare requests for this chunk
+            const requests = chunk.map(text => ({
+                model: "models/text-embedding-004",
+                content: {
+                    parts: [{
+                        text: text
+                    }]
+                }
+            }));
+
+            // Make the API call with the current chunk
+            const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/text-embedding-004:batchEmbedContents?key=${localStorage.gemKey}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ requests: requests })
+            });
+
+            // Parse the JSON response for this chunk
+            const embeddingsData = await response.json();
+
+            // Log the response for debugging
+            console.log(`Chunk API Response [${i / chunkSize + 1}]:`, embeddingsData);
+
+            // Check for errors in the response
+            if (embeddingsData.error) {
+                throw new Error(`API error: ${embeddingsData.error.message}`);
             }
-        }));
 
-        // Make the API call with the correct payload structure
-        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/text-embedding-004:batchEmbedContents?key=${localStorage.gemKey}`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ requests: requests }) // Wrap requests in an object
-        });
-
-        // Parse the JSON response
-        const embeddingsData = await response.json();
-
-        // Log the entire response for debugging
-        console.log("Full API Response:", embeddingsData);
-
-        // Check if the response contains an error
-        if (embeddingsData.error) {
-            throw new Error(`API error: ${embeddingsData.error.message}`);
+            // Check if 'embeddings' exists in the response
+            if (embeddingsData.embeddings && embeddingsData.embeddings.length > 0) {
+                // Extract and add the embeddings from this chunk to allEmbeddings
+                allEmbeddings.push(...embeddingsData.embeddings.map(embedding => embedding.values));
+            } else {
+                console.warn("No embeddings found in this chunk response.");
+            }
         }
 
-        // Check if the 'embeddings' array exists
-        if (!embeddingsData.embeddings || embeddingsData.embeddings.length === 0) {
-            console.error("API Response Missing 'embeddings' Key:", embeddingsData); // Log the full response
-            throw new Error("No embeddings in the API response.");
-        }
-
-        // Extract the embedding values from the 'embeddings' array
-        const values = embeddingsData.embeddings.map((embedding, index) => embedding.values);
-
-        console.log("Batch embeddings retrieved successfully:", values);
-        return values;  // Return the extracted values array
+        console.log("All embeddings retrieved successfully:", allEmbeddings);
+        return allEmbeddings;  // Return all retrieved embeddings
     } catch (error) {
         console.error('Error retrieving batch embeddings:', error);
-        return null; // Return null in case of an error
+        return null;
     }
 }
 
-
-// Function to display the batch embedding results on the webpage
+// Function to display only the first embedding result on the webpage
 function displayBatchEmbeddings(embeddings) {
-    if (embeddings && Array.isArray(embeddings)) {
-        // Create a formatted string to display each embedding
-        const formattedEmbeddings = embeddings.map((embedding, index) =>
-            `Embedding for text ${index + 1}: ${JSON.stringify(embedding, null, 2)}`
-        ).join('\n\n'); // Join the embeddings with double newlines for better readability
-
-        document.getElementById('batchEmbeddings').textContent = formattedEmbeddings;
+    if (embeddings && Array.isArray(embeddings) && embeddings.length > 0) {
+        // Display only the first embedding
+        const firstEmbedding = embeddings[0];
+        document.getElementById('batchEmbeddings').textContent = `First embedding: ${JSON.stringify(firstEmbedding, null, 2)}`;
     } else {
         document.getElementById('batchEmbeddings').textContent = 'Error generating batch embeddings. Check console for details.';
     }
