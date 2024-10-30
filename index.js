@@ -16,15 +16,6 @@ console.log(`index.js loaded\n${Date()}`);
 
 // Function to initialize embeddings after g1 is set up
 async function initializeEmbeddings() {
-    const specificText = 'TCGA-BP-5195.25c0b433-5557-4165-922e-2c1eac9c26f0, Date of Receipt: Clinical Diagnosis & History: Incidental 3 cm left upper pole renal mass. Specimens Submitted: 1: Kidney, Left Upper Pole';
-
-    // Display a loading message while fetching the single embedding
-    document.getElementById('singleEmbedding').textContent = 'Fetching embedding for specific text...';
-
-    // Get the embedding for the specific text
-    const singleEmbedding = await getEmbedding(specificText);
-    displaySingleEmbedding(singleEmbedding);
-
     // Fetch batch embeddings from the JSON file
     const texts = await fetchTextsFromJson('tcgareports.json');
 
@@ -51,27 +42,6 @@ async function fetchTextsFromJson(filePath) {
     } catch (error) {
         console.error('Error fetching the JSON file:', error);
         return []; // Return an empty array in case of an error
-    }
-}
-
-// Function to get embedding using GEM API
-async function getEmbedding(text) {
-    try {
-        // Use the existing instance of g1
-        const embedding = await g1.embed(text);
-        return embedding;
-    } catch (error) {
-        console.error('Error retrieving embedding:', error);
-        return null;  // Return null in case of an error
-    }
-}
-
-// Function to display the single embedding result on the webpage
-function displaySingleEmbedding(embedding) {
-    if (embedding) {
-        document.getElementById('singleEmbedding').textContent = JSON.stringify(embedding, null, 2);
-    } else {
-        document.getElementById('singleEmbedding').textContent = 'Error generating embedding.';
     }
 }
 
