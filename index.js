@@ -16,15 +16,31 @@ console.log(`index.js loaded\n${Date()}`);
 
 // Function to initialize embeddings after g1 is set up
 async function initializeEmbeddings() {
-    // Fetch batch embeddings from the JSON file
-    const texts = await fetchTextsFromJson('tcgareports.json');
+    // Attempt to retrieve cached embeddings from IndexedDB
+    const cachedEmbeddings = await getCachedEmbeddingsIndexedDB();
 
-    // Display a loading message while fetching batch embeddings
-    document.getElementById('batchEmbeddings').textContent = 'Fetching batch embeddings...';
+    if (cachedEmbeddings && cachedEmbeddings.length > 0) {
+        console.log("Embeddings loaded from IndexedDB.");
+        displayBatchEmbeddings(cachedEmbeddings);
+    } else {
+        console.log("Fetching new embeddings...");
 
-    // Get batch embeddings for the texts
-    const batchEmbeddings = await getBatchEmbeddings(texts);
-    displayBatchEmbeddings(batchEmbeddings);
+        // Fetch batch embeddings from the JSON file
+        const texts = await fetchTextsFromJson('tcgareports.json');
+
+        // Display a loading message while fetching batch embeddings
+        document.getElementById('batchEmbeddings').textContent = 'Fetching batch embeddings...';
+
+        // Get batch embeddings for the texts
+        const batchEmbeddings = await getBatchEmbeddings(texts);
+
+        // Cache the embeddings after fetching
+        if (batchEmbeddings) {
+            await cacheEmbeddingsIndexedDB(batchEmbeddings);
+        }
+
+        displayBatchEmbeddings(batchEmbeddings);
+    }
 }
 
 // Function to fetch texts from the JSON file
@@ -110,4 +126,50 @@ function displayBatchEmbeddings(embeddings) {
     } else {
         document.getElementById('batchEmbeddings').textContent = 'Error generating batch embeddings. Check console for details.';
     }
+}
+
+// Initialize IndexedDB
+async function openDatabase() {
+    return new Promise((resolve, reject) => {
+        const request = indexedDB.open("EmbeddingsDB", 1);
+        request.onerror = (event) => reject(event);
+        request.onsuccess = (event) => resolve(event.target.result);
+        request.onupgradeneeded = (event) => {
+            const db = event.target.result;
+            db.createObjectStore("embeddings", { keyPath: "id" });
+        };
+    });
+}
+
+// Store embeddings in IndexedDB
+async function cacheEmbeddingsIndexedDB(embeddings) {
+    const db = await openDatabase();
+    const transaction = db.transaction("embeddings", "readwrite");
+    const store = transaction.objectStore("embeddings");
+
+    embeddings.forEach((embedding, index) => {
+        store.put({ id: index, data: embedding });
+    });
+    console.log("Embeddings cached successfully in IndexedDB.");
+}
+
+// Retrieve embeddings from IndexedDB
+async function getCachedEmbeddingsIndexedDB() {
+    const db = await openDatabase();
+    const transaction = db.transaction("embeddings", "readonly");
+    const store = transaction.objectStore("embeddings");
+
+    const embeddings = [];
+    return new Promise((resolve) => {
+        store.openCursor().onsuccess = (event) => {
+            const cursor = event.target.result;
+            if (cursor) {
+                embeddings.push(cursor.value.data);
+                cursor.continue();
+            } else {
+                console.log("Embeddings loaded from IndexedDB.");
+                resolve(embeddings);
+            }
+        };
+    });
 }
