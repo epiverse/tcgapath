@@ -58,6 +58,28 @@ async function initializePyodide() {
     return transformedData.toJs();
   }
 
+  // Function to plot the PCA-transformed data using Plotly
+  function plotPCA(data) {
+    const xValues = data.map((point) => point[0]);
+    const yValues = data.map((point) => point[1]);
+
+    const trace = {
+      x: xValues,
+      y: yValues,
+      mode: "markers",
+      type: "scatter",
+      marker: { size: 6, color: "blue" },
+    };
+
+    const layout = {
+      title: "PCA Plot",
+      xaxis: { title: "PC1" },
+      yaxis: { title: "PC2" },
+    };
+
+    Plotly.newPlot("pcaPlot", [trace], layout);
+  }
+
   // Main function to execute PCA on embeddings and display results
   async function main() {
     try {
@@ -67,9 +89,8 @@ async function initializePyodide() {
       // Run PCA on the embeddings
       const dataPcaTransformed = await pcaTransform(pyodide, embeddings, 2);
 
-      // Display the transformed PCA results
-      const pcaResultsElement = document.getElementById("pcaResults");
-      pcaResultsElement.innerHTML = `<pre>${JSON.stringify(dataPcaTransformed, null, 2)}</pre>`;
+      // Plot the transformed PCA results
+      plotPCA(dataPcaTransformed);
 
     } catch (error) {
       console.error("Error performing PCA:", error);
