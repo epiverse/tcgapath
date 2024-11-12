@@ -173,3 +173,44 @@ async function getCachedEmbeddingsIndexedDB() {
         };
     });
 }
+
+// Function to retrieve and save embeddings from IndexedDB as a TSV file
+//async function downloadEmbeddingsFromIndexedDB() {
+//    try {
+//        // Retrieve cached embeddings from IndexedDB
+//        const embeddings = await getCachedEmbeddingsIndexedDB();
+
+       // Check if embeddings were found
+//        if (!embeddings || embeddings.length === 0) {
+//            console.warn("No embeddings found in IndexedDB to save.");
+//            return;
+//        }
+
+        // Convert embeddings to TSV format
+//        const tsvData = embeddings.map(embedding => embedding.join("\t")).join("\n");
+
+        // Create a Blob from the TSV data
+//        const blob = new Blob([tsvData], { type: 'text/tab-separated-values' });
+//        const url = URL.createObjectURL(blob);
+
+        // Create a download link
+//        const a = document.createElement('a');
+//        a.href = url;
+//        a.download = 'embeddings.tsv';
+//        document.body.appendChild(a);
+
+        // Programmatically click the link to start the download
+//        a.click();
+
+        // Clean up the URL and link element
+//        document.body.removeChild(a);
+//        URL.revokeObjectURL(url);
+
+//        console.log("Embeddings saved to TSV file on your PC.");
+//    } catch (error) {
+//        console.error("Error saving embeddings to TSV file:", error);
+//    }
+//}
+
+// Call the function after embeddings are cached or retrieved from IndexedDB
+//downloadEmbeddingsFromIndexedDB();

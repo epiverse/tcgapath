@@ -5,6 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link href="https://episphere.github.io/gps/obs.css" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.16.9/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/pyodide/v0.26.3/full/pyodide.js"></script>
+
     <title>TCGA Path</title>
 </head>
 <body>
@@ -24,6 +27,12 @@
         <pre id="batchEmbeddings">Fetching batch embeddings...</pre>
     </div>
 
+    <h2>PCA-Transformed Embeddings</h2>
+    <div id="pcaResults"></div>
+
     <script src="index.js"></script>
+    <script src="pcaplot.js" defer></script>
+
+
 </body>
 </html>
