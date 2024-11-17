@@ -12,6 +12,11 @@
     <li>
         <b>Raw TCGA Reports - </b>
         The raw github repository with TCGA Reports, did not activate gh-pages and as a consequence does not serve them with CORS. 
-        To solve that, the <a href="https://github.com/jkefeli/tcga-path-reports/blob/main/TCGA_Reports.csv.zip" target="_blank">reference zipped collection of reports</a> was <a href="https://github.com/epiverse/tcgapath/blob/main/TCGA_Reports.csv.zip" target="_blank">uploaded to TCGApath</a>.
+        To solve that, the <a href="https://github.com/jkefeli/tcga-path-reports/blob/main/TCGA_Reports.csv.zip" target="_blank">reference zipped collection of reports</a> was <a href="https://github.com/epiverse/tcgapath/blob/main/TCGA_Reports.csv.zip" target="_blank">uploaded to TCGApath</a>,
+        and an ES6 module, <a href="https://github.com/epiverse/tcgapath/blob/main/loadTCGAreports.mjs" target="_blank">loadTCGAreports.mjs</a> was developed to read the data onto a JSON object:
+        <p><code>
+            reps = await (await import('https://epiverse.github.io/tcgapath/loadTCGAreports.mjs')).loadTCGAreports()
+        </code></p>
+
     </li>
 </body>
