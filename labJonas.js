@@ -6,7 +6,9 @@ console.log(`labJonas.js loaded\n${Date()}`);
    reps={}
    const tcgaPath = await import('https://epiverse.github.io/tcgapath/loadTCGAreports.mjs')
    loadData.onclick=async function(){
+       loadData.disabled=true
        messages.innerHTML=' please wait, it typically takes a minute'
+       messages.style.color='blue'
        loadData.innerHTML='<span style="color:red;background-color:yellow">Loading ...</span>'
        reps = await tcgaPath.loadTCGAreports()
        console.log('reports',reps)
