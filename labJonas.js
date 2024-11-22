@@ -1,10 +1,12 @@
 console.log(`labJonas.js loaded\n${Date()}`);
 
 (async function(){
+   //const tcgaPath = await import('http://localhost:8000/tcgapath/loadTCGAreports.mjs')
+   const tcgaPath = await import('https://epiverse.github.io/tcgapath/loadTCGAreports.mjs')
    loadData = document.getElementById('loadData')
    messages = document.getElementById('messages')
+   fullDownload = document.getElementById('fullDownload')
    reps={}
-   const tcgaPath = await import('https://epiverse.github.io/tcgapath/loadTCGAreports.mjs')
    loadData.onclick=async function(){
        loadData.disabled=true
        messages.innerHTML=' please wait, it typically takes a minute'
@@ -15,5 +17,12 @@ console.log(`labJonas.js loaded\n${Date()}`);
        messages.innerHTML=`loaded: ${reps.length} reports embedded with ${reps[0].embeddings.length} dimensions`
        loadData.innerHTML='<span style="color:blue;background-color:white">... Data loaded</span>'
    }
+    fullDownload.onclick = async function(){
+        if(Object.entries(reps).length==0){
+            reps = await tcgaPath.loadTCGAreports()
+        }
+        tcgaPath.saveFullDataJSON(reps)
+    }
+
 
 })()

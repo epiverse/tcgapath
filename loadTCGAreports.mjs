@@ -1,5 +1,19 @@
 console.log(`import loadTCGAreports.mjs\n${Date()}`);
 
+function saveFile(txt=':-)',fileName="hello.txt") { // x is the content of the file
+	var bb = new Blob([txt]);
+   	var url = URL.createObjectURL(bb);
+	var a = document.createElement('a')
+   	a.href=url;
+	if (fileName){
+		if(typeof(fileName)=="string"){ // otherwise this is just a boolean toggle or something of the sort
+			a.download=fileName;
+		}
+		a.click() // then download it automatically 
+	} 
+	return a
+}
+
 const JSZip = (await import('https://esm.sh/jszip@3.10.1'))
 console.log(`0/4. Load key dependency, JSZip`)
 
@@ -74,8 +88,19 @@ async function loadTCGAreports(url='https://epiverse.github.io/tcgapath/TCGA_Rep
     return reps
 }
 
+async function saveFullDataJSON(reps=false,fname='tcgaPathReports.json'){
+    if(!reps){
+        console.log(`assembling reports, tipically under a minute`)
+        reps = await loadTCGAreports()
+    }else if(typeof(reps)=='string'){
+        reps = JSON.parse(reps)
+    }
+    saveFile(JSON.stringify(reps),fname)
+}
+
 export{
-    loadTCGAreports
+    loadTCGAreports,
+    saveFullDataJSON
 }
 
 // reps = (await ((await import('http://localhost:8000/tcgapath/loadTCGAreports.mjs')).loadTCGAreports)())
