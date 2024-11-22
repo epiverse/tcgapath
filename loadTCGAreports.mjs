@@ -18,8 +18,9 @@ const JSZip = (await import('https://esm.sh/jszip@3.10.1'))
 console.log(`0/4. Load key dependency, JSZip`)
 
 // const url = 'https://epiverse.github.io/tcgapath/TCGA_Reports.csv.zip' // default file url
-
-async function loadTCGAreports(url='https://epiverse.github.io/tcgapath/TCGA_Reports.csv.zip'){
+// https://raw.githubusercontent.com/jkefeli/tcga-path-reports/refs/heads/main/TCGA_Reports.csv.zip
+// https://epiverse.github.io/tcgapath/TCGA_Reports.csv.zip
+async function loadTCGAreports(url='https://raw.githubusercontent.com/jkefeli/tcga-path-reports/refs/heads/main/TCGA_Reports.csv.zip'){
     let tic = Date.now()
     // 1. load pathology reports
     console.log(`1/5. Load pathology reports from ${url} ...`)
