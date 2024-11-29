@@ -48,9 +48,9 @@ async function loadTCGAreports(url='https://raw.githubusercontent.com/jkefeli/tc
     data = response.arrayBuffer()
     zip = await JSZip.loadAsync(data)
     file = zip.file('embeddings.tsv')
-    content = await file.async('string')
-    content = content.split('\n')
-    content.forEach(function(row,i){
+    let rows = await file.async('string')
+    //rows = content.split('\n')
+    rows.forEach(function(row,i){
         reps[i].embeddings=row.split('\t').map(JSON.parse)
     })
     console.log(`4/5. Load and assign pathology slide ids to patients ... wait for 5/5 ...`)
