@@ -48,8 +48,8 @@ async function loadTCGAreports(url='https://raw.githubusercontent.com/jkefeli/tc
     data = response.arrayBuffer()
     zip = await JSZip.loadAsync(data)
     file = zip.file('embeddings.tsv')
-    let rows = await file.async('string')
-    //rows = content.split('\n')
+    content = await file.async('string')
+    let rows = content.split('\n')
     rows.forEach(function(row,i){
         reps[i].embeddings=row.split('\t').map(JSON.parse)
     })
