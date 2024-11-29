@@ -1,0 +1,36 @@
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://episphere.github.io/gps/obs.css" rel="stylesheet">
+</head>
+<body>
+    <h2>
+        Jonas notebook
+    </h2>
+    <p>
+        Jonas's lab notebook, please do not edit even if you can.
+    </p>
+    <ol>
+    <li>
+        <b>Raw TCGA Reports - </b>
+        The raw github repository with TCGA Reports, did not activate gh-pages and as a consequence does not serve them with CORS. 
+        To solve that, the <a href="https://github.com/jkefeli/tcga-path-reports/blob/main/TCGA_Reports.csv.zip" target="_blank">reference zipped collection of reports</a> was <a href="https://github.com/epiverse/tcgapath/blob/main/TCGA_Reports.csv.zip" target="_blank">uploaded to TCGApath</a>,
+        and an ES6 module, <a href="https://github.com/epiverse/tcgapath/blob/main/loadTCGAreports.mjs" target="_blank">loadTCGAreports.mjs</a> was developed to read the data onto a JSON object:
+        <p><code>
+            reps = await (await import('https://epiverse.github.io/tcgapath/loadTCGAreports.mjs')).loadTCGAreports()
+        </code></p>
+        
+
+    </li>
+    <li>Observable Notebook: <br>For live execution of the tcga reports loader see <a href="https://observablehq.com/@epiverse/tcgapath#reps" target="_blank">Observable Notebook</a>.</li>
+    <li><div><h3></h3>
+           <button id="loadData" style="color:green">Load data</button>
+           <span id="messages"></span>
+        </div>
+    </li>
+    <li>Download <button id="fullDownload" style="color:red" disabled="true">full data as JSON</button></li>
+    <li>Download <button id="embeddingsAsTsv" style="color:red" disabled="true">embeddings as tsv</button></li>
+    <li>Download <button  style="color:red" disabled="true">cancer type as tsv</button></li>
+    </ol>
+</body>
+
+<script src='labJonas.js'></script>
