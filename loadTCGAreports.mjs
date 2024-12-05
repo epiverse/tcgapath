@@ -15,7 +15,7 @@ function saveFile(txt=':-)',fileName="hello.txt") { // x is the content of the f
 }
 
 const JSZip = (await import('https://esm.sh/jszip@3.10.1'))
-console.log(`0/4. Load key dependency, JSZip`)
+console.log(`0/6. Load key dependency, JSZip`)
 
 // const url = 'https://epiverse.github.io/tcgapath/TCGA_Reports.csv.zip' // default file url
 // https://raw.githubusercontent.com/jkefeli/tcga-path-reports/refs/heads/main/TCGA_Reports.csv.zip
@@ -23,7 +23,7 @@ console.log(`0/4. Load key dependency, JSZip`)
 async function loadTCGAreports(url='https://raw.githubusercontent.com/jkefeli/tcga-path-reports/refs/heads/main/TCGA_Reports.csv.zip'){
     let tic = Date.now()
     // 1. load pathology reports
-    console.log(`1/5. Load pathology reports from ${url} ...`)
+    console.log(`1/6. Load pathology reports from ${url} ...`)
     let response = await fetch(url)
     let data = response.arrayBuffer()
     let zip = await JSZip.loadAsync(data);
@@ -32,7 +32,7 @@ async function loadTCGAreports(url='https://raw.githubusercontent.com/jkefeli/tc
     let content = await file.async('string')
     content = content.split('\n').slice(1,-1) // cut column headers and blank tail
     // 2. parse ids and text for individual reports
-    console.log(`2/5. Parse individual reports into a object array structure ...`)
+    console.log(`2/6. Parse individual reports into a object array structure ...`)
     let reps=content.map(function(row,i){ // map individual reports
         let id=row.match(/(^[^\,]+)/)[0] // patient id
         return {
@@ -41,7 +41,7 @@ async function loadTCGAreports(url='https://raw.githubusercontent.com/jkefeli/tc
             text:row.slice(id.length+1).slice(1,-1) // removing non standard start and end whitespace
         }
     })
-    console.log(`3/5. Load and parse individual embeddings ...`)
+    console.log(`3/6. Load and parse individual embeddings ...`)
     // 3. load embeddings reports
     // note variable names being reused, no need to re-declare them
     response = await fetch('https://epiverse.github.io/tcgapath/embeddings.tsv.zip')
@@ -53,7 +53,7 @@ async function loadTCGAreports(url='https://raw.githubusercontent.com/jkefeli/tc
     rows.forEach(function(row,i){
         reps[i].embeddings=row.split('\t').map(JSON.parse)
     })
-    console.log(`4/5. Load and assign pathology slide ids to patients ... wait for 5/5 ...`)
+    console.log(`4/6. Load and assign pathology slide ids to patients ... almost there, wait for 6/6 ...`)
     // 4. load whole slide images (wsi)
     response = await fetch('https://epiverse.github.io/tcgapath/wsi.json.zip')
     data = response.arrayBuffer()
@@ -84,8 +84,32 @@ async function loadTCGAreports(url='https://raw.githubusercontent.com/jkefeli/tc
             }
         }
     })
-    console.log(`... 5/5 done, TCGA reports assembled in (${(Date.now()-tic)/1000} secs)`)
+    console.log(`... 5/6 done, TCGA reports assembled in (${(Date.now()-tic)/1000} secs)`)
     console.log('QAQC: reports with 5+ svs images',multipleImages)
+
+	
+    console.log(`metadata loaded ${Date()}`)
+	// load cancer type metadata
+	let metadata = (await (await fetch('https://raw.githubusercontent.com/jkefeli/tcga-path-reports/refs/heads/main/data/tcga_metadata/tcga_patient_to_cancer_type.csv')).text()).split('\r\n').map(row => row.split(',')).slice(1)
+	// match reps to metadata
+    reps.forEach((rep,i)=>{
+        // match for each metadata id
+        let repId = rep.id.match(/^[^/.]*/)[0]
+		let metaMatch=false
+		metadata.forEach((meta,j)=>{
+			if(repId==meta[0]){
+	            reps[i].patient_id=repId
+	            reps[i].cancer_type=meta[1]
+	            metaMatch=repId
+	        }
+	    })
+    if(!metaMatch){
+        console.log(repId,`no metadata match`)
+    }
+        //console.log(`match:`,repId)                 
+    })
+	
+	console.log(`6/6 vaidated with TCGA Metadata`)
     return reps
 }
 
