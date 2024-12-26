@@ -1,26 +1,33 @@
-// Function to load embeddings from IndexedDB
-async function loadEmbeddingsFromIndexedDB() {
-    return new Promise((resolve, reject) => {
-        const request = indexedDB.open("EmbeddingsDB", 1);
+async function fetchTCGAReports() {
+    const GITHUB_ZIP_URL = "https://epiverse.github.io/tcgapath/embeddings.tsv.zip";
+    try {
+        const response = await fetch(GITHUB_ZIP_URL);
+        if (!response.ok) {
+            throw new Error(`Failed to fetch ZIP file. HTTP Status: ${response.status}`);
+        }
+        console.log("Successfully fetched ZIP file.");
 
-        request.onerror = () => reject("Error opening database");
-        request.onsuccess = (event) => {
-            const db = event.target.result;
-            const transaction = db.transaction("embeddings", "readonly");
-            const store = transaction.objectStore("embeddings");
+        const data = await response.arrayBuffer();
+        const zip = await JSZip.loadAsync(data);
+        console.log("Successfully loaded ZIP file.");
 
-            const embeddings = [];
-            store.openCursor().onsuccess = (event) => {
-                const cursor = event.target.result;
-                if (cursor) {
-                    embeddings.push(cursor.value.data);
-                    cursor.continue();
-                } else {
-                    resolve(embeddings);
-                }
-            };
-        };
-    });
+        const file = zip.file('embeddings.tsv');
+        if (!file) {
+            throw new Error("TSV file not found in the ZIP archive.");
+        }
+
+        const content = await file.async('string');
+        return content;
+    } catch (error) {
+        console.error("Error fetching and unzipping file:", error);
+        throw error;
+    }
+}
+
+function parseTSV(tsvContent) {
+    const data = tsvContent.trim().split("\n").map(line => line.split("\t").map(parseFloat));
+    console.log("Parsed TSV data. Rows:", data.length, "Columns per row:", data[0]?.length || 0);
+    return data;
 }
 
 // Function to compute UMAP on the embeddings
@@ -83,7 +90,8 @@ function plotUMAP(umapData, nComponents) {
 // Main function to load embeddings, compute UMAP, and plot
 async function mainUMAP(nComponents = 2) {
     try {
-        const embeddings = await loadEmbeddingsFromIndexedDB();
+        const reports = await fetchTCGAReports();
+        const embeddings = parseTSV(reports);
 
         if (embeddings.length === 0) {
             console.error("No embeddings data available for UMAP.");
@@ -101,4 +109,4 @@ async function mainUMAP(nComponents = 2) {
 }
 
 // Run UMAP main function with 2D or 3D based on your choice
-window.addEventListener("load", () => mainUMAP(2));  // Use 2 or 3 for 2D or 3D UMAP
+window.addEventListener("load", () => mainUMAP(3));  // Use 2 or 3 for 2D or 3D UMAP

@@ -72,52 +72,45 @@ async function pcaTransform3D(pyodide, data, nComponents = 3) {
     return transformedData.toJs();
 }
 
-function create3DPlot(pcaResult, containerId = 'plot', plotSize = 1000) {
-    // Prepare container
+function create3DPlot(pcaResult, containerId = 'plot', plotSize = 500) {
     const container = document.getElementById(containerId);
     if (!container) {
         console.error(`Container with ID '${containerId}' not found.`);
         return;
     }
 
-    // Clean container if there's already content
     container.innerHTML = '';
 
-    // Scene setup
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(75, 1, 0.1, 1000);
-    camera.position.z = 50;
+    camera.position.z = 10;
 
-    // Renderer setup
     const renderer = new THREE.WebGLRenderer();
     renderer.setSize(plotSize, plotSize);
+    renderer.setClearColor(0xffffff, 1); // Set background color to white
     container.appendChild(renderer.domElement);
 
-    // Add points
     const geometry = new THREE.BufferGeometry();
-    const points = pcaResult.flat(); // Flatten PCA result for position attribute
+    const points = pcaResult.flat();
     geometry.setAttribute('position', new THREE.Float32BufferAttribute(points, 3));
 
     const material = new THREE.PointsMaterial({
-        size: 0.01,           // Adjust the size of each point
-        color: 0x0077ff,     // Blue color for the points
-        transparent: false,   // Enable transparency
-        opacity: 0.8         // Slightly transparent for a better effect
+        size: 0.005,
+        color: 0x0077ff,
+        transparent: false,
+        opacity: 0.8
     });
     const pointCloud = new THREE.Points(geometry, material);
     scene.add(pointCloud);
 
-    // Add X, Y, Z axes to the scene
-    const axesHelper = new THREE.AxesHelper(20); // 20 is the length of the axes
+    const axesHelper = new THREE.AxesHelper(20);
     scene.add(axesHelper);
 
-    // Controls for interactivity
     const controls = new THREE.OrbitControls(camera, renderer.domElement);
-    controls.enableDamping = true; // Smooth interaction
+    controls.enableDamping = true;
     controls.dampingFactor = 0.1;
     controls.enableZoom = true;
 
-    // Resize plot dynamically
     window.addEventListener('resize', () => {
         const size = Math.min(container.offsetWidth, container.offsetHeight);
         renderer.setSize(size, size);
@@ -125,7 +118,6 @@ function create3DPlot(pcaResult, containerId = 'plot', plotSize = 1000) {
         camera.updateProjectionMatrix();
     });
 
-    // Animation loop
     function animate() {
         requestAnimationFrame(animate);
         controls.update();
@@ -134,6 +126,7 @@ function create3DPlot(pcaResult, containerId = 'plot', plotSize = 1000) {
     animate();
 }
 
+
 // Main function to execute the PCA and plotting
 async function main() {
     try {
@@ -141,7 +134,7 @@ async function main() {
 
         // Fetch and parse the TCGA reports
         const reports = await fetchTCGAReports();
-        const embeddings = parseTSV(reports);
+        const embeddings = parseTSV(reports);  // Correct assignment to embeddings
 
         // Initialize Pyodide
         const pyodide = await initializePyodide3D();

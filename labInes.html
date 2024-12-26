@@ -3,14 +3,13 @@
 <head>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link href="https://episphere.github.io/gps/obs.css" rel="stylesheet">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script> <!-- JSZip library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/ml-matrix@6.12.0/matrix.umd.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/numeric@1.2.6/numeric-1.2.6.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
-
-
+    <script src="https://cdn.jsdelivr.net/gh/karpathy/tsnejs/tsne.js"></script>
 
 </head>
 <body>
@@ -18,11 +17,28 @@
     <p>Ines' lab notebook, please do not edit even if you can.</p>
 
     <h2>PCA Plot using TensorFlow</h2>
-    <div id="pcaPlot3DTensorFlow" style="width: 600px; height: 400px;"></div>
+    <!--
     <div id="plot" style="width: 100%; height: 100%; margin: auto; border: 1px solid #ccc;"></div>
+    -->
 
+    <button id="fetchEmbeddings" style="margin: 20px; padding: 10px;">Download Embeddings with identifiers</button>
 
     <script src="labInes.js"></script>
+    <!--
     <script src="pca3d_tensorflow.js" defer></script>
+    -->
+    <script src="EmbeddingsWithIdentifier.js"></script>
+    <script>
+        // Attach event listener after the script with the function is loaded
+        document.getElementById('fetchEmbeddings').addEventListener('click', async () => {
+            try {
+                await initializeEmbeddings(); // Should now be accessible
+            } catch (error) {
+                console.error("Error initializing embeddings:", error);
+            }
+        });
+    </script>
+
+
 </body>
 </html>

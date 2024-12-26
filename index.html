@@ -9,11 +9,31 @@
     <script src="https://cdn.jsdelivr.net/pyodide/v0.26.3/full/pyodide.js"></script>
     <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/umap-js@1.4.0/lib/umap-js.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <!-- <script src="https://cdn.jsdelivr.net/gh/karpathy/tsnejs/tsne.js"></script> -->
 
     <title>TCGA Path</title>
 </head>
 <body>
     <h1>TCGA Path</h1>
+
+<!--
+    <h2>PCA Plot 2D</h2>
+    <div id="pcaPlot" style="width: 600px; height: 400px;"></div>
+-->
+
+    <h2>PCA Plot 3D</h2>
+    <div id="plot" style="width: 600px; height: 400px;"></div>
+
+
+    <h2>UMAP Plot</h2>
+    <div id="umapPlot" style="width: 600px; height: 400px;"></div>
+
+<!--
+    <h2>t-SNE Plot</h2>
+    <div id="tsnePlot" style="width: 600px; height: 400px;"></div>
 
     <h2>Batch Embedding Example</h2>
 
@@ -29,20 +49,13 @@
         <pre id="batchEmbeddings">Fetching batch embeddings...</pre>
     </div>
 
-    <h2>PCA Plot 2D</h2>
-    <div id="pcaPlot" style="width: 600px; height: 400px;"></div>
-
-    <h2>PCA Plot 3D</h2>
-    <div id="pcaPlot3D" style="width: 600px; height: 400px;"></div>
-
-    <h2>UMAP Plot</h2>
-    <div id="umapPlot" style="width: 600px; height: 400px;"></div>
-
     <script src="index.js"></script>
     <script src="pcaplot2d.js" defer></script>
-    <script src="pcaplot3d.js" defer></script>
+-->
+    <script src="pca3d.js" defer></script>
     <script src="umap.js" defer></script>
-
+    <!--
+    <script src="tsne.js" defer></script> -->
 
 </body>
 </html>
