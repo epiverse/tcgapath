@@ -72,7 +72,7 @@ async function pcaTransform3D(pyodide, data, nComponents = 3) {
     return transformedData.toJs();
 }
 
-function create3DPlot(pcaResult, containerId = 'plot', plotSize = 500) {
+function create3DPlot(pcaResult, containerId = 'plot', plotSize = 600) {
     const container = document.getElementById(containerId);
     if (!container) {
         console.error(`Container with ID '${containerId}' not found.`);
@@ -126,7 +126,6 @@ function create3DPlot(pcaResult, containerId = 'plot', plotSize = 500) {
     animate();
 }
 
-
 // Main function to execute the PCA and plotting
 async function main() {
     try {
@@ -134,7 +133,7 @@ async function main() {
 
         // Fetch and parse the TCGA reports
         const reports = await fetchTCGAReports();
-        const embeddings = parseTSV(reports);  // Correct assignment to embeddings
+        const embeddings = parseTSV(reports);
 
         // Initialize Pyodide
         const pyodide = await initializePyodide3D();

@@ -31,7 +31,7 @@ function parseTSV(tsvContent) {
 }
 
 // Function to compute UMAP on the embeddings
-async function computeUMAP(embeddings, nComponents = 2) {
+async function computeUMAP(embeddings, nComponents = 3) {
     // Initialize UMAP
     const umap = new UMAP.UMAP({
         nComponents: nComponents,
@@ -45,50 +45,72 @@ async function computeUMAP(embeddings, nComponents = 2) {
     return umapEmbedding;
 }
 
-// Function to plot UMAP embeddings with Plotly
-function plotUMAP(umapData, nComponents) {
-    if (nComponents === 2) {
-        const trace = {
-            x: umapData.map((point) => point[0]),
-            y: umapData.map((point) => point[1]),
-            mode: "markers",
-            type: "scatter",
-            marker: { size: 6, color: "blue" },
-        };
-
-        const layout = {
-            title: "2D UMAP Plot",
-            xaxis: { title: "UMAP1" },
-            yaxis: { title: "UMAP2" },
-        };
-
-        Plotly.newPlot("umapPlot", [trace], layout);
-
-    } else if (nComponents === 3) {
-        const trace = {
-            x: umapData.map((point) => point[0]),
-            y: umapData.map((point) => point[1]),
-            z: umapData.map((point) => point[2]),
-            mode: "markers",
-            type: "scatter3d",
-            marker: { size: 6, color: "blue" },
-        };
-
-        const layout = {
-            title: "3D UMAP Plot",
-            scene: {
-                xaxis: { title: "UMAP1" },
-                yaxis: { title: "UMAP2" },
-                zaxis: { title: "UMAP3" },
-            },
-        };
-
-        Plotly.newPlot("umapPlot", [trace], layout);
+// Function to create a 3D UMAP plot using Three.js
+function create3DUMAPPlot(umapResult, containerId = 'umapPlot', plotSize = 600) {
+    // Prepare container
+    const container = document.getElementById(containerId);
+    if (!container) {
+        console.error(`Container with ID '${containerId}' not found.`);
+        return;
     }
+
+    // Clean container if there's already content
+    container.innerHTML = '';
+
+    // Scene setup
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(75, 1, 0.1, 1000);
+    camera.position.z = 50;
+
+    // Renderer setup
+    const renderer = new THREE.WebGLRenderer();
+    renderer.setSize(plotSize, plotSize);
+    renderer.setClearColor(0xffffff, 1);
+    container.appendChild(renderer.domElement);
+
+    // Add points
+    const geometry = new THREE.BufferGeometry();
+    const points = umapResult.flat(); // Flatten UMAP result for position attribute
+    geometry.setAttribute('position', new THREE.Float32BufferAttribute(points, 3));
+
+    const material = new THREE.PointsMaterial({
+        size: 0.01,           // Adjust the size of each point
+        color: 0x0077ff,     // Blue color for the points
+        transparent: false,   // Enable transparency
+        opacity: 0.8         // Slightly transparent for a better effect
+    });
+    const pointCloud = new THREE.Points(geometry, material);
+    scene.add(pointCloud);
+
+    // Add X, Y, Z axes to the scene
+    const axesHelper = new THREE.AxesHelper(20); // 20 is the length of the axes
+    scene.add(axesHelper);
+
+    // Controls for interactivity
+    const controls = new THREE.OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true; // Smooth interaction
+    controls.dampingFactor = 0.1;
+    controls.enableZoom = true;
+
+    // Resize plot dynamically
+    window.addEventListener('resize', () => {
+        const size = Math.min(container.offsetWidth, container.offsetHeight);
+        renderer.setSize(size, size);
+        camera.aspect = 1;
+        camera.updateProjectionMatrix();
+    });
+
+    // Animation loop
+    function animate() {
+        requestAnimationFrame(animate);
+        controls.update();
+        renderer.render(scene, camera);
+    }
+    animate();
 }
 
 // Main function to load embeddings, compute UMAP, and plot
-async function mainUMAP(nComponents = 2) {
+async function mainUMAP(nComponents = 3) {
     try {
         const reports = await fetchTCGAReports();
         const embeddings = parseTSV(reports);
@@ -100,13 +122,13 @@ async function mainUMAP(nComponents = 2) {
 
         const umapData = await computeUMAP(embeddings, nComponents);
 
-        // Plot UMAP result
-        plotUMAP(umapData, nComponents);
+        // Create 3D UMAP plot
+        create3DUMAPPlot(umapData);
 
     } catch (error) {
         console.error("Error performing UMAP:", error);
     }
 }
 
-// Run UMAP main function with 2D or 3D based on your choice
-window.addEventListener("load", () => mainUMAP(3));  // Use 2 or 3 for 2D or 3D UMAP
+// Run UMAP main function with 3D UMAP
+window.addEventListener("load", () => mainUMAP(3));
