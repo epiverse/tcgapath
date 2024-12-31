@@ -24,8 +24,8 @@
             margin: 0;
         }
         .glow-on-hover {
-            width: 220px;
-            height: 100px; /* Adjusted height to accommodate loader */
+            width: 280px;
+            height: 60px;
             border: none;
             outline: none;
             color: #fff;
@@ -35,8 +35,8 @@
             z-index: 0;
             border-radius: 10px;
             margin: 10px;
-            padding: 10px 20px;
-            font-size: 16px;
+            padding: 15px 25px;
+            font-size: 18px;
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -50,7 +50,7 @@
             height: 20px;
             -webkit-animation: spin 2s linear infinite;
             animation: spin 2s linear infinite;
-            margin-top: 10px; /* Margin to separate text and loader */
+            margin-top: 10px;
         }
         .hidden {
             display: none;
@@ -85,9 +85,12 @@
             top: 0;
             border-radius: 10px;
         }
+        #container {
+            display: flex;
+        }
         #plotContainer {
-            width: 800px;
-            height: 700px;
+            width: 1000px;
+            height: 800px;
             border: 1px solid #ccc;
             display: flex;
             align-items: center;
@@ -97,6 +100,21 @@
             width: 100%;
             height: 100%;
             display: none;
+        }
+        #legend {
+            margin-left: 20px;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 10px;
+            background: #fff;
+        }
+        #legend ul {
+            list-style-type: none;
+            padding: 0;
+        }
+        #legend li {
+            margin-bottom: 10px;
+            font-size: 14px;
         }
         #loadingMessage {
             display: none;
@@ -133,9 +151,16 @@
         <button class="glow-on-hover" onclick="showPlot('umapPlot')">UMAP Plot</button>
     </div>
 
-    <div id="plotContainer">
-        <div id="umapPlot"></div>
-        <div id="plot"></div>
+    <div id="container">
+        <div id="plotContainer">
+            <div id="umapPlot"></div>
+            <div id="plot"></div>
+        </div>
+        <div id="legend">
+            <ul>
+                <!-- Legend items will be dynamically inserted here -->
+            </ul>
+        </div>
     </div>
 
     <div id="loadingMessage">Computing embeddings...</div>

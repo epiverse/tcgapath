@@ -72,8 +72,15 @@ function performPCAUsingMlMatrix(data, numComponents = 3) {
         return null;
     }
 }
+// Function to fetch metadata and process cancer types
+async function fetchMetadata() {
+    const metadataUrl = 'https://raw.githubusercontent.com/jkefeli/tcga-path-reports/refs/heads/main/data/tcga_metadata/tcga_patient_to_cancer_type.csv';
+    const metadata = await (await fetch(metadataUrl)).text();
+    return metadata.split('\r\n').slice(1).map(row => row.split(',')[1]); // Extract cancer types
+}
 
-function create3DPlot(pcaResult, containerId = 'plot', plotSize = 1000) {
+// Modified create3DPlot function to color points based on cancer type
+function create3DPlot(pcaResult, cancerTypes, containerId = 'plot', plotSize = 1000) {
     // Prepare container
     const container = document.getElementById(containerId);
     if (!container) {
@@ -94,27 +101,44 @@ function create3DPlot(pcaResult, containerId = 'plot', plotSize = 1000) {
     renderer.setSize(plotSize, plotSize);
     container.appendChild(renderer.domElement);
 
-    // Add points
+    // Add points with colors based on cancer type
     const geometry = new THREE.BufferGeometry();
-    const points = pcaResult.flat(); // Flatten PCA result for position attribute
+    const points = [];
+    const colors = [];
+
+    // Create a map for assigning colors to each unique cancer type
+    const uniqueCancerTypes = [...new Set(cancerTypes)];
+    const colorMap = {};
+    uniqueCancerTypes.forEach((type, index) => {
+        const color = new THREE.Color().setHSL(index / uniqueCancerTypes.length, 0.5, 0.5); // Generate distinct colors
+        colorMap[type] = color;
+    });
+
+    pcaResult.forEach((point, index) => {
+        points.push(...point);
+        const color = colorMap[cancerTypes[index]] || new THREE.Color(0x999999); // Default gray for unknown types
+        colors.push(color.r, color.g, color.b);
+    });
+
     geometry.setAttribute('position', new THREE.Float32BufferAttribute(points, 3));
+    geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
 
     const material = new THREE.PointsMaterial({
-        size: 0.01,           // Adjust the size of each point
-        color: 0x0077ff,     // Blue color for the points
-        transparent: false,   // Enable transparency
-        opacity: 0.8         // Slightly transparent for a better effect
+        size: 0.1,
+        vertexColors: true,
+        opacity: 0.8
     });
+
     const pointCloud = new THREE.Points(geometry, material);
     scene.add(pointCloud);
 
     // Add X, Y, Z axes to the scene
-    const axesHelper = new THREE.AxesHelper(20); // 20 is the length of the axes
+    const axesHelper = new THREE.AxesHelper(20);
     scene.add(axesHelper);
 
     // Controls for interactivity
     const controls = new THREE.OrbitControls(camera, renderer.domElement);
-    controls.enableDamping = true; // Smooth interaction
+    controls.enableDamping = true;
     controls.dampingFactor = 0.1;
     controls.enableZoom = true;
 
@@ -133,6 +157,13 @@ function create3DPlot(pcaResult, containerId = 'plot', plotSize = 1000) {
         renderer.render(scene, camera);
     }
     animate();
+
+    // Create legend
+    const legend = document.getElementById('legend');
+    const legendContent = uniqueCancerTypes.map(
+        type => `<li><span style="color: ${colorMap[type].getStyle()};">&#9679;</span> ${type}</li>`
+    ).join('');
+    legend.innerHTML = `<ul>${legendContent}</ul>`;
 }
 
 // Main function to execute the PCA and plotting
@@ -154,8 +185,11 @@ async function main() {
 
         console.log("PCA result:", pcaResult);
 
-        // Visualize the result
-        create3DPlot(pcaResult);
+        // Load cancer types (metadata)
+        const cancerTypes = await fetchMetadata();
+
+        // Visualize the result with color coding
+        create3DPlot(pcaResult, cancerTypes);
     } catch (error) {
         console.error("Error:", error);
     }

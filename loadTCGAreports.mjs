@@ -9,8 +9,8 @@ function saveFile(txt=':-)',fileName="hello.txt") { // x is the content of the f
 		if(typeof(fileName)=="string"){ // otherwise this is just a boolean toggle or something of the sort
 			a.download=fileName;
 		}
-		a.click() // then download it automatically 
-	} 
+		a.click() // then download it automatically
+	}
 	return a
 }
 
@@ -87,7 +87,7 @@ async function loadTCGAreports(url='https://raw.githubusercontent.com/jkefeli/tc
     console.log(`... 5/6 done, TCGA reports assembled in (${(Date.now()-tic)/1000} secs)`)
     console.log('QAQC: reports with 5+ svs images',multipleImages)
 
-	
+
     console.log(`metadata loaded ${Date()}`)
 	// load cancer type metadata
 	let metadata = (await (await fetch('https://raw.githubusercontent.com/jkefeli/tcga-path-reports/refs/heads/main/data/tcga_metadata/tcga_patient_to_cancer_type.csv')).text()).split('\r\n').map(row => row.split(',')).slice(1)
@@ -106,9 +106,9 @@ async function loadTCGAreports(url='https://raw.githubusercontent.com/jkefeli/tc
     if(!metaMatch){
         console.log(repId,`no metadata match`)
     }
-        //console.log(`match:`,repId)                 
+        //console.log(`match:`,repId)
     })
-	
+
 	console.log(`6/6 vaidated with TCGA Metadata`)
     return reps
 }
