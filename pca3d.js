@@ -1,37 +1,31 @@
-const GITHUB_ZIP_URL = "https://epiverse.github.io/tcgapath/embeddings.tsv.zip";
-const METADATA_URL = "https://raw.githubusercontent.com/jkefeli/tcga-path-reports/refs/heads/main/data/tcga_metadata/tcga_patient_to_cancer_type.csv";
+const JSON_URL = "https://raw.githubusercontent.com/episphere/ese/main/data/tcga_reports.json.zip"; // Updated to the raw file URL
 
-// Function to fetch and unzip the ZIP file
-async function fetchTCGAReports() {
+// Function to fetch and unzip the JSON file
+async function fetchJSONData() {
     try {
-        const response = await fetch(GITHUB_ZIP_URL);
+        const response = await fetch(JSON_URL);
         if (!response.ok) {
-            throw new Error(`Failed to fetch ZIP file. HTTP Status: ${response.status}`);
+            throw new Error(`Failed to fetch JSON file. HTTP Status: ${response.status}`);
         }
-        console.log("Successfully fetched ZIP file.");
+        console.log("Successfully fetched JSON file.");
 
         const data = await response.arrayBuffer();
         const zip = await JSZip.loadAsync(data);
         console.log("Successfully loaded ZIP file.");
 
-        const file = zip.file('embeddings.tsv');
+        const file = zip.file('tcga_reports.json');
         if (!file) {
-            throw new Error("TSV file not found in the ZIP archive.");
+            throw new Error("JSON file not found in the ZIP archive.");
         }
 
         const content = await file.async('string');
-        return content;
+        const jsonData = JSON.parse(content);
+
+        return jsonData;
     } catch (error) {
         console.error("Error fetching and unzipping file:", error);
         throw error;
     }
-}
-
-// Function to parse TSV data into a 2D array
-function parseTSV(tsvContent) {
-    const data = tsvContent.trim().split("\n").map(line => line.split("\t").map(parseFloat));
-    console.log("Parsed TSV data. Rows:", data.length, "Columns per row:", data[0]?.length || 0);
-    return data;
 }
 
 // Function to initialize Pyodide for 3D PCA
@@ -73,14 +67,7 @@ async function pcaTransform3D(pyodide, data, nComponents = 3) {
     return transformedData.toJs();
 }
 
-// Function to fetch metadata and process cancer types
-async function fetchMetadata() {
-    const response = await fetch(METADATA_URL);
-    const metadata = await response.text();
-    return metadata.split('\r\n').slice(1).map(row => row.split(',')[1]); // Extract cancer types
-}
-
-// Modified create3DPlot function to color points based on cancer type
+// Function to create a 3D plot with points colored by cancer type
 function create3DPlot(pcaResult, cancerTypes, containerId = 'plot', plotSize = 800) {
     const container = document.getElementById(containerId);
     if (!container) {
@@ -164,9 +151,12 @@ async function main() {
     try {
         console.log("Starting main process...");
 
-        // Fetch and parse the TCGA reports
-        const reports = await fetchTCGAReports();
-        const embeddings = parseTSV(reports);
+        // Fetch and parse the JSON data
+        const jsonData = await fetchJSONData();
+
+        // Extract embeddings and cancer types from JSON data
+        const embeddings = jsonData.map(record => record.embedding);
+        const cancerTypes = jsonData.map(record => record.properties.cancer_type);
 
         // Initialize Pyodide
         const pyodide = await initializePyodide3D();
@@ -180,9 +170,6 @@ async function main() {
         }
 
         console.log("PCA result:", pcaResult);
-
-        // Load cancer types (metadata)
-        const cancerTypes = await fetchMetadata();
 
         // Visualize the result with color coding
         create3DPlot(pcaResult, cancerTypes);
