@@ -88,9 +88,14 @@
         #container {
             display: flex;
         }
+        #plotButtons {
+            display: flex;
+            flex-direction: column;
+            margin-right: 20px;
+        }
         #plotContainer {
             width: 1000px;
-            height: 800px;
+            height: 700px;
             border: 1px solid #ccc;
             display: flex;
             align-items: center;
@@ -146,12 +151,11 @@
         <div class="loader"></div>
     </button>
 
-    <div id="plotButtons" class="hidden">
-        <button class="glow-on-hover" onclick="showPlot('plot')">PCA Plot</button>
-        <button class="glow-on-hover" onclick="showPlot('umapPlot')">UMAP Plot</button>
-    </div>
-
     <div id="container">
+        <div id="plotButtons" class="hidden">
+            <button class="glow-on-hover" onclick="showPlot('plot')">PCA Plot</button>
+            <button class="glow-on-hover" onclick="showPlot('umapPlot')">UMAP Plot</button>
+        </div>
         <div id="plotContainer">
             <div id="umapPlot"></div>
             <div id="plot"></div>
