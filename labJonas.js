@@ -19,6 +19,9 @@ console.log(`labJonas.js loaded\n${Date()}`);
        // activate dowload buttons
        fullDownload.disabled=false
        fullDownload.style.color='green'
+       metadataAsTsv.disabled=false
+       metadataAsTsv.style.color='green'
+       
    }
     fullDownload.onclick = async function(){
         if(Object.entries(reps).length==0){
@@ -26,6 +29,16 @@ console.log(`labJonas.js loaded\n${Date()}`);
         }
         tcgaPath.saveFullDataJSON(reps)
         fullDownload.onmouseover=function(ev){ev.target.style.backgroundColor='yellow'}
+    }
+    metadataAsTsv.onclick = async function(){
+        // create header
+        meta = `row\tcancer_type\tpatiend_id`
+        // fill rows
+        meta += reps.map(rep=>{
+            return `\n${rep.i+1}\t${rep.cancer_type}\t${rep.patient_id}`
+        }).join('')
+        tcgaPath.saveFile(meta,'cancer_type_meta.tsv')
+        return meta
     }
 
 

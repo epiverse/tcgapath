@@ -125,7 +125,8 @@ async function saveFullDataJSON(reps=false,fname='tcgaPathReports.json'){
 
 export{
     loadTCGAreports,
-    saveFullDataJSON
+    saveFullDataJSON,
+	saveFile
 }
 
 // reps = (await ((await import('http://localhost:8000/tcgapath/loadTCGAreports.mjs')).loadTCGAreports)())
