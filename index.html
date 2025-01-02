@@ -107,17 +107,24 @@
             display: none;
         }
         #legend {
-            margin-left: 20px;
-            padding: 10px;
+            margin-left: 10px;
+            padding: 5px;
             border: 1px solid #ccc;
             border-radius: 10px;
             background: #fff;
+            display: flex;
+            flex-wrap: wrap; /* Allow the items to wrap */
+            width: 150px; /* Adjust width as needed */
         }
         #legend ul {
             list-style-type: none;
             padding: 0;
+            display: flex;
+            flex-wrap: wrap; /* Allow the items to wrap */
+            width: 100%; /* Ensure the items take full width of the legend */
         }
         #legend li {
+            width: 50%; /* Set each item to take half the width of the legend */
             margin-bottom: 10px;
             font-size: 14px;
         }
@@ -165,6 +172,9 @@
                 <li><span style="color:#ff0000;">&#9679;</span> TypeA</li>
                 <li><span style="color:#00ff00;">&#9679;</span> TypeB</li>
                 <li><span style="color:#0000ff;">&#9679;</span> TypeC</li>
+                <li><span style="color:#ff00ff;">&#9679;</span> TypeD</li>
+                <li><span style="color:#ffff00;">&#9679;</span> TypeE</li>
+                <li><span style="color:#00ffff;">&#9679;</span> TypeF</li>
             </ul>
         </div>
     </div>
