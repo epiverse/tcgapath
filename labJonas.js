@@ -9,7 +9,7 @@ console.log(`labJonas.js loaded\n${Date()}`);
    reps={}
    loadData.onclick=async function(){
        loadData.disabled=true
-       messages.innerHTML=' please wait, it typically takes a minute'
+       messages.innerHTML=' please wait, it typically takes a minute - use the browser console in the Dev tools to follow the progress of injesting from diferent data sources.'
        messages.style.color='blue'
        loadData.innerHTML='<span style="color:red;background-color:yellow">Loading ...</span>'
        reps = await tcgaPath.loadTCGAreports()
