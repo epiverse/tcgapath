@@ -3,6 +3,7 @@ console.log(`labJonas.js loaded\n${Date()}`);
 (async function(){
    //const tcgaPath = await import('http://localhost:8000/tcgapath/loadTCGAreports.mjs')
    const tcgaPath = await import('https://epiverse.github.io/tcgapath/loadTCGAreports.mjs')
+   const objAbb = (await import('https://epiverse.github.io/tcgapath/tcgaAbbreviations.mjs')).objAbb
    loadData = document.getElementById('loadData')
    messages = document.getElementById('messages')
    fullDownload = document.getElementById('fullDownload')
@@ -32,10 +33,10 @@ console.log(`labJonas.js loaded\n${Date()}`);
     }
     metadataAsTsv.onclick = async function(){
         // create header
-        meta = `row\tcancer_type\tpatiend_id`
+        meta = `row\tcancer_type\tpatiend_id\tcancer_name`
         // fill rows
         meta += reps.map(rep=>{
-            return `\n${rep.i+1}\t${rep.cancer_type}\t${rep.patient_id}`
+            return `\n${rep.i+1}\t${rep.cancer_type}\t${rep.patient_id}\t${objAbb[rep.cancer_type]}`
         }).join('')
         tcgaPath.saveFile(meta,'cancer_type_meta.tsv')
         return meta
