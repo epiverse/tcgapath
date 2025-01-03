@@ -1,8 +1,8 @@
 console.log(`labJonas.js loaded\n${Date()}`);
 
 (async function(){
-   //const tcgaPath = await import('http://localhost:8000/tcgapath/loadTCGAreports.mjs')
-   const tcgaPath = await import('https://epiverse.github.io/tcgapath/loadTCGAreports.mjs')
+   const tcgaPath = await import('http://localhost:8000/tcgapath/loadTCGAreports.mjs')
+   //const tcgaPath = await import('https://epiverse.github.io/tcgapath/loadTCGAreports.mjs')
    loadData = document.getElementById('loadData')
    messages = document.getElementById('messages')
    fullDownload = document.getElementById('fullDownload')
@@ -14,7 +14,7 @@ console.log(`labJonas.js loaded\n${Date()}`);
        loadData.innerHTML='<span style="color:red;background-color:yellow">Loading ...</span>'
        reps = await tcgaPath.loadTCGAreports()
        console.log('reports',reps)
-       messages.innerHTML=`loaded: ${reps.length} reports embedded with ${reps[0].embeddings.length} dimensions`
+       messages.innerHTML=`loaded: ${reps.length} reports embedded with ${reps[0].embeddings.length} dimensions by <a href="https://ai.google.dev/gemini-api/docs/models/gemini" target="blank">Gemini 1.5 Flash</a>.`
        loadData.innerHTML='<span style="color:blue;background-color:white">... Data loaded</span>'
        // activate dowload buttons
        fullDownload.disabled=false
