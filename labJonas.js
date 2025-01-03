@@ -1,8 +1,8 @@
 console.log(`labJonas.js loaded\n${Date()}`);
 
 (async function(){
-   const tcgaPath = await import('http://localhost:8000/tcgapath/loadTCGAreports.mjs')
-   //const tcgaPath = await import('https://epiverse.github.io/tcgapath/loadTCGAreports.mjs')
+   //const tcgaPath = await import('http://localhost:8000/tcgapath/loadTCGAreports.mjs')
+   const tcgaPath = await import('https://epiverse.github.io/tcgapath/loadTCGAreports.mjs')
    loadData = document.getElementById('loadData')
    messages = document.getElementById('messages')
    fullDownload = document.getElementById('fullDownload')
