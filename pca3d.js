@@ -1,32 +1,54 @@
-const JSON_URL = "https://raw.githubusercontent.com/episphere/ese/main/data/tcga_reports.json.zip"; // Updated to the raw file URL
+const CANCER_TYPE_META_URL = "https://raw.githubusercontent.com/epiverse/tcgapath/main/cancer_type_meta.tsv";
+const EMBEDDINGS_URL = "https://raw.githubusercontent.com/epiverse/tcgapath/main/embeddings.tsv.zip";
 
-// Function to fetch and unzip the JSON file
-async function fetchJSONData() {
+// Function to fetch and unzip the embeddings file
+async function fetchEmbeddings() {
     try {
-        const response = await fetch(JSON_URL);
+        const response = await fetch(EMBEDDINGS_URL);
         if (!response.ok) {
-            throw new Error(`Failed to fetch JSON file. HTTP Status: ${response.status}`);
+            throw new Error(`Failed to fetch embeddings file. HTTP Status: ${response.status}`);
         }
-        console.log("Successfully fetched JSON file.");
+        console.log("Successfully fetched embeddings file.");
 
         const data = await response.arrayBuffer();
         const zip = await JSZip.loadAsync(data);
         console.log("Successfully loaded ZIP file.");
 
-        const file = zip.file('tcga_reports.json');
+        const file = zip.file('embeddings.tsv');
         if (!file) {
-            throw new Error("JSON file not found in the ZIP archive.");
+            throw new Error("Embeddings file not found in the ZIP archive.");
         }
 
         const content = await file.async('string');
-        const jsonData = JSON.parse(content);
+        const embeddings = content.trim().split("\n").map(line => line.split("\t").map(Number));
 
-        return jsonData;
+        return embeddings;
     } catch (error) {
-        console.error("Error fetching and unzipping file:", error);
+        console.error("Error fetching and unzipping embeddings file:", error);
         throw error;
     }
 }
+
+// Function to fetch the cancer type metadata
+async function fetchCancerTypeMeta() {
+    try {
+        const response = await fetch(CANCER_TYPE_META_URL);
+        if (!response.ok) {
+            throw new Error(`Failed to fetch cancer type meta file. HTTP Status: ${response.status}`);
+        }
+        console.log("Successfully fetched cancer type meta file.");
+
+        const content = await response.text();
+        const lines = content.trim().split("\n");
+        const cancerTypes = lines.slice(1).map(line => line.split("\t")[1]); // Extract cancer types
+
+        return cancerTypes;
+    } catch (error) {
+        console.error("Error fetching cancer type meta file:", error);
+        throw error;
+    }
+}
+
 
 // Function to initialize Pyodide for 3D PCA
 async function initializePyodide3D() {
@@ -47,7 +69,6 @@ async function pcaTransform3D(pyodide, data, nComponents = 3) {
     const jsonData = JSON.stringify(data);
     pyodide.globals.set("X_json", jsonData);
     pyodide.globals.set("n_components", nComponents);
-
     const transformedData = pyodide.runPython(`
         import json
         import numpy as np
@@ -60,9 +81,9 @@ async function pcaTransform3D(pyodide, data, nComponents = 3) {
 
         pca = PCA(n_components=n_components)
         X_transformed = pca.fit_transform(X).tolist()
+
         X_transformed
     `);
-
     console.log("3D PCA transformation completed:", transformedData);
     return transformedData.toJs();
 }
@@ -94,7 +115,7 @@ function create3DPlot(pcaResult, cancerTypes, containerId = 'plot', plotSize = 8
     const uniqueCancerTypes = [...new Set(cancerTypes)];
     const colorMap = {};
     uniqueCancerTypes.forEach((type, index) => {
-        const color = new THREE.Color().setHSL(index / uniqueCancerTypes.length, 0.5, 0.5); // Generate distinct colors
+        const color = new THREE.Color().setHSL(index / uniqueCancerTypes.length, 1, 0.5); // Generate distinct colors
         colorMap[type] = color;
     });
 
@@ -151,12 +172,8 @@ async function main() {
     try {
         console.log("Starting main process...");
 
-        // Fetch and parse the JSON data
-        const jsonData = await fetchJSONData();
-
-        // Extract embeddings and cancer types from JSON data
-        const embeddings = jsonData.map(record => record.embedding);
-        const cancerTypes = jsonData.map(record => record.properties.cancer_type);
+        // Fetch embeddings and cancer type metadata
+        const [embeddings, cancerTypes] = await Promise.all([fetchEmbeddings(), fetchCancerTypeMeta()]);
 
         // Initialize Pyodide
         const pyodide = await initializePyodide3D();

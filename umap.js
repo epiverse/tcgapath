@@ -1,29 +1,47 @@
-//const JSON_URL = "https://raw.githubusercontent.com/episphere/ese/main/data/tcga_reports.json.zip"; // Updated to the raw file URL
-
-// Function to fetch and unzip the JSON file
-async function fetchJSONData() {
+// Function to fetch and unzip the embeddings file
+async function fetchEmbeddings() {
     try {
-        const response = await fetch(JSON_URL);
+        const response = await fetch(EMBEDDINGS_URL);
         if (!response.ok) {
-            throw new Error(`Failed to fetch JSON file. HTTP Status: ${response.status}`);
+            throw new Error(`Failed to fetch embeddings file. HTTP Status: ${response.status}`);
         }
-        console.log("Successfully fetched JSON file.");
+        console.log("Successfully fetched embeddings file.");
 
         const data = await response.arrayBuffer();
         const zip = await JSZip.loadAsync(data);
         console.log("Successfully loaded ZIP file.");
 
-        const file = zip.file('tcga_reports.json');
+        const file = zip.file('embeddings.tsv');
         if (!file) {
-            throw new Error("JSON file not found in the ZIP archive.");
+            throw new Error("Embeddings file not found in the ZIP archive.");
         }
 
         const content = await file.async('string');
-        const jsonData = JSON.parse(content);
+        const embeddings = content.trim().split("\n").map(line => line.split("\t").map(Number));
 
-        return jsonData;
+        return embeddings;
     } catch (error) {
-        console.error("Error fetching and unzipping file:", error);
+        console.error("Error fetching and unzipping embeddings file:", error);
+        throw error;
+    }
+}
+
+// Function to fetch the cancer type metadata
+async function fetchCancerTypeMeta() {
+    try {
+        const response = await fetch(CANCER_TYPE_META_URL);
+        if (!response.ok) {
+            throw new Error(`Failed to fetch cancer type meta file. HTTP Status: ${response.status}`);
+        }
+        console.log("Successfully fetched cancer type meta file.");
+
+        const content = await response.text();
+        const lines = content.trim().split("\n");
+        const cancerTypes = lines.slice(1).map(line => line.split("\t")[1]); // Extract cancer types
+
+        return cancerTypes;
+    } catch (error) {
+        console.error("Error fetching cancer type meta file:", error);
         throw error;
     }
 }
@@ -124,12 +142,8 @@ function create3DUMAPPlot(umapResult, cancerTypes, containerId = 'umapPlot', plo
 // Main function to load embeddings, compute UMAP, and plot
 async function mainUMAP(nComponents = 3) {
     try {
-        // Fetch and parse the JSON data
-        const jsonData = await fetchJSONData();
-
-        // Extract embeddings and cancer types from JSON data
-        const embeddings = jsonData.map(record => record.embedding);
-        const cancerTypes = jsonData.map(record => record.properties.cancer_type);
+        // Fetch embeddings and cancer type metadata
+        const [embeddings, cancerTypes] = await Promise.all([fetchEmbeddings(), fetchCancerTypeMeta()]);
 
         // Compute UMAP
         const umapResult = await computeUMAP(embeddings, nComponents);
