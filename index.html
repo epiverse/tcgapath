@@ -12,6 +12,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <!-- <script src="https://cdn.jsdelivr.net/npm/tsne-js@1.0.3/dist/index.js"></script> -->
 
     <title>TCGA Path</title>
     <style>
@@ -160,12 +161,14 @@
 
     <div id="container">
         <div id="plotButtons" class="hidden">
-            <button class="glow-on-hover" onclick="showPlot('plot')">PCA Plot</button>
+            <button class="glow-on-hover" onclick="showPlot('pcaPlot')">PCA Plot</button>
             <button class="glow-on-hover" onclick="showPlot('umapPlot')">UMAP Plot</button>
+            <button class="glow-on-hover" onclick="showPlot('tsnePlot')">t-SNE Plot</button> <!-- Added button for t-SNE -->
         </div>
         <div id="plotContainer">
+            <div id="pcaPlot"></div>
             <div id="umapPlot"></div>
-            <div id="plot"></div>
+            <div id="tsnePlot"></div> <!-- Added div for t-SNE -->
         </div>
         <div id="legend">
             <ul>
@@ -187,10 +190,12 @@
 
     <script src="pca3d.js" defer></script>
     <script src="umap.js" defer></script>
+    <script src="tsne.js" defer></script>
     <script>
         function showPlot(plotId) {
-            document.getElementById('plot').style.display = 'none';
+            document.getElementById('pcaPlot').style.display = 'none';
             document.getElementById('umapPlot').style.display = 'none';
+            document.getElementById('tsnePlot').style.display = 'none'; // Hide t-SNE plot
             document.getElementById(plotId).style.display = 'block';
         }
 
@@ -216,7 +221,7 @@
         window.onload = computeEmbeddings;
 
         // Show PCA plot by default
-        showPlot('plot');
+        showPlot('pcaPlot');
     </script>
 </body>
 </html>
