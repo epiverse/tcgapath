@@ -27,6 +27,20 @@ async function fetchEmbeddings() {
     }
 }
 
+// Function to download data as a JSON file
+function downloadJSON(data, filename) {
+    const jsonData = JSON.stringify(data, null, 2);
+    const blob = new Blob([jsonData], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.click();
+
+    URL.revokeObjectURL(url);
+}
+
 // Function to fetch the cancer type metadata
 async function fetchCancerTypeMeta() {
     const CANCER_TYPE_META_URL = "https://raw.githubusercontent.com/epiverse/tcgapath/main/cancer_type_meta.tsv";
@@ -55,7 +69,7 @@ export function performTSNE(vectors, dim) {
         dim: dim, // Dimensionality of the output (2D or 3D)
         perplexity: vectors.length < 10 ? vectors.length - 1 : 10, // Set perplexity based on input size
         theta: 0.5,  // Speed vs. accuracy trade-off
-        iterations: 200,  // Number of iterations
+        iterations: 300,  // Number of iterations
         eta: 200 // Learning rate
     });
 
@@ -63,7 +77,7 @@ export function performTSNE(vectors, dim) {
     tsne.initDataRaw(vectors);
 
     // Perform t-SNE steps for the given number of iterations
-    for (let k = 0; k < 200; k++) {
+    for (let k = 0; k < 300; k++) {
         tsne.step(); // Each step improves the solution
     }
 
@@ -175,8 +189,8 @@ async function main() {
         // Visualize the result with color coding
         create3DPlot(tsneResult, cancerTypes);
 
-        // Download UMAP points as JSON (if needed)
-        // downloadJSON(tsneResult, 'tsne_points.json');
+        // Download tsne points as JSON (if needed)
+        downloadJSON(tsneResult, 'tsne_points.json');
 
     } catch (error) {
         console.error("Error:", error);
