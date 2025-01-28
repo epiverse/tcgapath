@@ -1,3 +1,22 @@
+const TSNE_JSON_URL = "https://raw.githubusercontent.com/epiverse/tcgapath/main/tsne_points.json";
+
+// Function to fetch tsne data from the tsne_points.json file
+async function fetchtsne() {
+    try {
+        const response = await fetch(TSNE_JSON_URL);
+        if (!response.ok) {
+            throw new Error(`Failed to fetch tsne file. HTTP Status: ${response.status}`);
+        }
+        console.log("Successfully fetched tsne file.");
+
+        const content = await response.json();
+        return content;
+    } catch (error) {
+        console.error("Error fetching tsne file:", error);
+        return null;
+    }
+}
+
 // Function to fetch and unzip the embeddings file
 async function fetchEmbeddings() {
     const EMBEDDINGS_URL = "https://raw.githubusercontent.com/epiverse/tcgapath/main/embeddings.tsv.zip";
@@ -165,8 +184,7 @@ export function create3DPlot(tsneResult, cancerTypes, containerId = 'tsnePlot', 
     legend.innerHTML = `<ul>${legendContent}</ul>`;
 }
 
-// Main function to execute the t-SNE and plotting
-async function main() {
+async function main(nComponents = 3) {
     try {
         console.log("Starting main process...");
 
@@ -176,8 +194,18 @@ async function main() {
         console.log("Embeddings fetched:", embeddings.length);
         console.log("Cancer types fetched:", cancerTypes.length);
 
-        // Perform t-SNE
-        const tsneResult = performTSNE(embeddings, 3);
+        // Check if TSNE data is available
+        const tsnepoints = await fetchtsne();
+
+        let tsneResult;
+
+        if (tsnepoints) {
+            console.log("Using UMAP data from JSON file.");
+            tsneResult = tsnepoints;
+        } else {
+            console.log("TSNE data not found. Calculating TSNE.");
+            const tsneResult = performTSNE(embeddings, 3);
+        }
 
         // Check if t-SNE result is valid
         if (!tsneResult || tsneResult.length === 0) {
@@ -190,7 +218,7 @@ async function main() {
         create3DPlot(tsneResult, cancerTypes);
 
         // Download tsne points as JSON (if needed)
-        downloadJSON(tsneResult, 'tsne_points.json');
+        //downloadJSON(tsneResult, 'tsne_points.json');
 
     } catch (error) {
         console.error("Error:", error);

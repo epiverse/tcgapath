@@ -194,7 +194,7 @@ async function mainUMAP(nComponents = 3) {
             umapResult = await computeUMAP(embeddings, nComponents);
         }
 
-        // Check if PCA result is valid
+        // Check if UMAP result is valid
         if (!umapResult || umapResult.length === 0) {
             throw new Error("UMAP computation returned no valid data.");
         }
