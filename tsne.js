@@ -82,7 +82,7 @@ async function fetchCancerTypeMeta() {
 }
 
 // Function to perform t-SNE using the TSNE class
-export function performTSNE(vectors, dim) {
+async function performTSNE(vectors, dim) {
     // Access the tSNE constructor from window.tsnejs.tSNE
     const tsne = new window.tsnejs.tSNE({
         dim: dim, // Dimensionality of the output (2D or 3D)
@@ -106,7 +106,7 @@ export function performTSNE(vectors, dim) {
 
 
 // Function to create a 3D plot with points colored by cancer type
-export function create3DPlot(tsneResult, cancerTypes, containerId = 'tsnePlot', plotSize = 800) {
+function create3DPlot(tsneResult, cancerTypes, containerId = 'tsnePlot', plotSize = 800) {
     const container = document.getElementById(containerId);
     if (!container) {
         console.error(`Container with ID '${containerId}' not found.`);

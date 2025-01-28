@@ -1,6 +1,5 @@
 const UMAP_JSON_URL = "https://raw.githubusercontent.com/epiverse/tcgapath/main/umap_points.json";
 
-
 // Function to fetch umap data from the umap_points.json file
 async function fetchumap() {
     try {
