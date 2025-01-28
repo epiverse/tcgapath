@@ -1,69 +1,6 @@
-// Define the TSNE class based on the provided package
-class TSNE {
-    constructor(config) {
-        config = config || {};
-        this.dim = config.dim || 2;
-        this.perplexity = config.perplexity || 30.0;
-        this.earlyExaggeration = config.earlyExaggeration || 4.0;
-        this.learningRate = config.learningRate || 1000.0;
-        this.nIter = config.nIter || 1000;
-        this.metric = config.metric || 'euclidean';
-        this.barneshut = config.barneshut || false;
-        this.inputData = null;
-        this.outputEmbedding = null;
-    }
-
-    init(opts) {
-        opts = opts || {};
-        const inputData = opts.data || [];
-        const type = opts.type || 'dense';
-
-        if (type === 'dense') {
-            this.inputData = inputData;
-        } else if (type === 'sparse') {
-            const shape = [];
-            let size = 1;
-
-            for (let d = 0; d < inputData[0].length; d++) {
-                const dimShape = Math.max(...inputData.map(coord => coord[d])) + 1;
-                shape.push(dimShape);
-                size *= dimShape;
-            }
-            this.inputData = new Float64Array(size);
-            for (const coord of inputData) {
-                this.inputData[coord.join(',')] = 1;
-            }
-        } else {
-            throw new Error('input data type must be dense or sparse');
-        }
-        this.outputEmbedding = Array.from({ length: this.inputData.length }, () => Array(this.dim).fill(0).map(() => Math.random()));
-    }
-
-    run() {
-        console.log('Calculating pairwise distances');
-        // Calculate distances, joint probabilities, and run gradient descent
-        // Placeholder for actual implementation
-
-        return [0, this.nIter];
-    }
-
-    getOutput() {
-        return this.outputEmbedding;
-    }
-
-    // Placeholder for _gradDesc function
-    _gradDesc(iter, nIter, momentum, minGradNorm = 1e-6, minErrorDiff = 1e-6) {
-        // Simplified example, add your own gradient descent logic
-        // For now, returning dummy values
-        return [0, nIter];
-    }
-}
-
-// Log to verify TSNE class definition
-console.log(typeof TSNE); // Should output 'function' if TSNE is loaded correctly
-
 // Function to fetch and unzip the embeddings file
 async function fetchEmbeddings() {
+    const EMBEDDINGS_URL = "https://raw.githubusercontent.com/epiverse/tcgapath/main/embeddings.tsv.zip";
     try {
         const response = await fetch(EMBEDDINGS_URL);
         if (!response.ok) {
@@ -92,6 +29,7 @@ async function fetchEmbeddings() {
 
 // Function to fetch the cancer type metadata
 async function fetchCancerTypeMeta() {
+    const CANCER_TYPE_META_URL = "https://raw.githubusercontent.com/epiverse/tcgapath/main/cancer_type_meta.tsv";
     try {
         const response = await fetch(CANCER_TYPE_META_URL);
         if (!response.ok) {
@@ -110,20 +48,32 @@ async function fetchCancerTypeMeta() {
     }
 }
 
-// Function to perform t-SNE using the redefined TSNE class
-function tsne(vectors, dim) {
-    const model = new TSNE({
-        dim: dim,
-        perplexity: vectors.length < 10 ? vectors.length - 1 : 30 // Adjust perplexity as needed
+// Function to perform t-SNE using the TSNE class
+export function performTSNE(vectors, dim) {
+    // Access the tSNE constructor from window.tsnejs.tSNE
+    const tsne = new window.tsnejs.tSNE({
+        dim: dim, // Dimensionality of the output (2D or 3D)
+        perplexity: vectors.length < 10 ? vectors.length - 1 : 10, // Set perplexity based on input size
+        theta: 0.5,  // Speed vs. accuracy trade-off
+        iterations: 200,  // Number of iterations
+        eta: 200 // Learning rate
     });
 
-    model.init({ data: vectors });
-    model.run();
-    return model.getOutput();
+    // Initialize tSNE with the input vectors
+    tsne.initDataRaw(vectors);
+
+    // Perform t-SNE steps for the given number of iterations
+    for (let k = 0; k < 200; k++) {
+        tsne.step(); // Each step improves the solution
+    }
+
+    // Return the t-SNE output (reduced dimensionality)
+    return tsne.getSolution();
 }
 
+
 // Function to create a 3D plot with points colored by cancer type
-function create3DPlot(tsneResult, cancerTypes, containerId = 'tsnePlot', plotSize = 800) {
+export function create3DPlot(tsneResult, cancerTypes, containerId = 'tsnePlot', plotSize = 800) {
     const container = document.getElementById(containerId);
     if (!container) {
         console.error(`Container with ID '${containerId}' not found.`);
@@ -213,7 +163,7 @@ async function main() {
         console.log("Cancer types fetched:", cancerTypes.length);
 
         // Perform t-SNE
-        const tsneResult = tsne(embeddings, 3);
+        const tsneResult = performTSNE(embeddings, 3);
 
         // Check if t-SNE result is valid
         if (!tsneResult || tsneResult.length === 0) {
@@ -224,6 +174,10 @@ async function main() {
 
         // Visualize the result with color coding
         create3DPlot(tsneResult, cancerTypes);
+
+        // Download UMAP points as JSON (if needed)
+        // downloadJSON(tsneResult, 'tsne_points.json');
+
     } catch (error) {
         console.error("Error:", error);
     }

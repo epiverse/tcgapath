@@ -1,5 +1,23 @@
 const CANCER_TYPE_META_URL = "https://raw.githubusercontent.com/epiverse/tcgapath/main/cancer_type_meta.tsv";
 const EMBEDDINGS_URL = "https://raw.githubusercontent.com/epiverse/tcgapath/main/embeddings.tsv.zip";
+const PCA_EUCLIDEAN_JSON_URL = "https://raw.githubusercontent.com/epiverse/tcgapath/main/pca_euclidean.json";
+
+// Function to fetch PCA data from the pca_euclidean.json file
+async function fetchPCAEuclidean() {
+    try {
+        const response = await fetch(PCA_EUCLIDEAN_JSON_URL);
+        if (!response.ok) {
+            throw new Error(`Failed to fetch PCA Euclidean file. HTTP Status: ${response.status}`);
+        }
+        console.log("Successfully fetched PCA Euclidean file.");
+
+        const content = await response.json();
+        return content;
+    } catch (error) {
+        console.error("Error fetching PCA Euclidean file:", error);
+        return null;
+    }
+}
 
 // Function to fetch and unzip the embeddings file
 async function fetchEmbeddings() {
@@ -89,7 +107,7 @@ async function pcaTransform3D(pyodide, data, nComponents = 3) {
 }
 
 // Function to create a 3D plot with points colored by cancer type
-function create3DPlot(pcaResult, cancerTypes, containerId = 'plot', plotSize = 800) {
+function create3DPlot(pcaResult, cancerTypes, containerId = 'pcaPlot', plotSize = 800) {
     const container = document.getElementById(containerId);
     if (!container) {
         console.error(`Container with ID '${containerId}' not found.`);
@@ -175,11 +193,21 @@ async function main() {
         // Fetch embeddings and cancer type metadata
         const [embeddings, cancerTypes] = await Promise.all([fetchEmbeddings(), fetchCancerTypeMeta()]);
 
+        // Check if PCA Euclidean data is available
+        const pcaEuclidean = await fetchPCAEuclidean();
+
         // Initialize Pyodide
         const pyodide = await initializePyodide3D();
 
-        // Perform PCA
-        const pcaResult = await pcaTransform3D(pyodide, embeddings, 3);
+        let pcaResult;
+
+        if (pcaEuclidean) {
+            console.log("Using PCA Euclidean data from JSON file.");
+            pcaResult = pcaEuclidean;
+        } else {
+            console.log("PCA Euclidean data not found. Calculating PCA.");
+            pcaResult = await pcaTransform3D(pyodide, embeddings, 3);
+        }
 
         // Check if PCA result is valid
         if (!pcaResult || pcaResult.length === 0) {

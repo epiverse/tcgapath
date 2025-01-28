@@ -1,3 +1,37 @@
+const UMAP_JSON_URL = "https://raw.githubusercontent.com/epiverse/tcgapath/main/umap_points.json";
+
+
+// Function to fetch umap data from the umap_points.json file
+async function fetchumap() {
+    try {
+        const response = await fetch(UMAP_JSON_URL);
+        if (!response.ok) {
+            throw new Error(`Failed to fetch umap file. HTTP Status: ${response.status}`);
+        }
+        console.log("Successfully fetched umap file.");
+
+        const content = await response.json();
+        return content;
+    } catch (error) {
+        console.error("Error fetching umap file:", error);
+        return null;
+    }
+}
+
+// Function to download data as a JSON file
+function downloadJSON(data, filename) {
+    const jsonData = JSON.stringify(data, null, 2);
+    const blob = new Blob([jsonData], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.click();
+
+    URL.revokeObjectURL(url);
+}
+
 // Function to fetch and unzip the embeddings file
 async function fetchEmbeddings() {
     try {
@@ -142,17 +176,35 @@ function create3DUMAPPlot(umapResult, cancerTypes, containerId = 'umapPlot', plo
 // Main function to load embeddings, compute UMAP, and plot
 async function mainUMAP(nComponents = 3) {
     try {
+        console.log("Starting main process...");
+
         // Fetch embeddings and cancer type metadata
         const [embeddings, cancerTypes] = await Promise.all([fetchEmbeddings(), fetchCancerTypeMeta()]);
 
-        // Compute UMAP
-        const umapResult = await computeUMAP(embeddings, nComponents);
+        // Check if PCA Euclidean data is available
+        const umappoints = await fetchumap();
 
-        // Create 3D UMAP plot with color coding
-        create3DUMAPPlot(umapResult, cancerTypes);
+        let umapResult;
 
+        if (umappoints) {
+            console.log("Using UMAP data from JSON file.");
+            umapResult = umappoints;
+        } else {
+            console.log("UMAP data not found. Calculating PCA.");
+            umapResult = await computeUMAP(embeddings, nComponents);
+        }
+
+        // Check if PCA result is valid
+        if (!umapResult || umapResult.length === 0) {
+            throw new Error("UMAP computation returned no valid data.");
+        }
+
+        console.log("UMAP result:", umapResult);
+
+        // Visualize the result with color coding
+        create3DPlot(umapResult, cancerTypes);
     } catch (error) {
-        console.error("Error performing UMAP:", error);
+        console.error("Error:", error);
     }
 }
 
