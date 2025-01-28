@@ -1,4 +1,6 @@
 console.log(`import loadTCGAreports.mjs\n${Date()}`);
+const JSZip = (await import('https://esm.sh/jszip@3.10.1')).default
+console.log(`0/6. Load key dependency, JSZip`)
 
 function saveFile(txt=':-)',fileName="hello.txt") { // x is the content of the file
 	var bb = new Blob([txt]);
@@ -14,18 +16,15 @@ function saveFile(txt=':-)',fileName="hello.txt") { // x is the content of the f
 	return a
 }
 
-const JSZip = (await import('https://esm.sh/jszip@3.10.1'))
-console.log(`0/6. Load key dependency, JSZip`)
-
 // const url = 'https://epiverse.github.io/tcgapath/TCGA_Reports.csv.zip' // default file url
 // https://raw.githubusercontent.com/jkefeli/tcga-path-reports/refs/heads/main/TCGA_Reports.csv.zip
 // https://epiverse.github.io/tcgapath/TCGA_Reports.csv.zip
 async function loadTCGAreports(url='https://raw.githubusercontent.com/jkefeli/tcga-path-reports/refs/heads/main/TCGA_Reports.csv.zip'){
     let tic = Date.now()
-    // 1. load pathology reports
-    console.log(`1/6. Load pathology reports from ${url} ...`)
+	// 1. load pathology reports
+    console.log(`1/6. Load pathology reports from ${url} ...`);
     let response = await fetch(url)
-    let data = response.arrayBuffer()
+    let data = await response.arrayBuffer()
     let zip = await JSZip.loadAsync(data);
     let filename='TCGA_Reports.csv'
     let file = zip.file(filename)
