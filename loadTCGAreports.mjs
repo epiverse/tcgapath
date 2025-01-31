@@ -1,6 +1,6 @@
 console.log(`import loadTCGAreports.mjs\n${Date()}`);
 const JSZip = (await import('https://esm.sh/jszip@3.10.1')).default
-console.log(`0/6. Load key dependency, JSZip`)
+console.log(`0/7. Load key dependency, JSZip`)
 
 function saveFile(txt=':-)',fileName="hello.txt") { // x is the content of the file
 	var bb = new Blob([txt]);
@@ -22,7 +22,7 @@ function saveFile(txt=':-)',fileName="hello.txt") { // x is the content of the f
 async function loadTCGAreports(url='https://raw.githubusercontent.com/jkefeli/tcga-path-reports/refs/heads/main/TCGA_Reports.csv.zip'){
     let tic = Date.now()
 	// 1. load pathology reports
-    console.log(`1/6. Load pathology reports from ${url} ...`);
+    console.log(`1/7. Load pathology reports from ${url} ...`);
     let response = await fetch(url)
     let data = await response.arrayBuffer()
     let zip = await JSZip.loadAsync(data);
@@ -31,7 +31,7 @@ async function loadTCGAreports(url='https://raw.githubusercontent.com/jkefeli/tc
     let content = await file.async('string')
     content = content.split('\n').slice(1,-1) // cut column headers and blank tail
     // 2. parse ids and text for individual reports
-    console.log(`2/6. Parse individual reports into a object array structure ...`)
+    console.log(`2/7. Parse individual reports into a object array structure ...`)
     let reps=content.map(function(row,i){ // map individual reports
         let id=row.match(/(^[^\,]+)/)[0] // patient id
         return {
@@ -40,7 +40,7 @@ async function loadTCGAreports(url='https://raw.githubusercontent.com/jkefeli/tc
             text:row.slice(id.length+1).slice(1,-1) // removing non standard start and end whitespace
         }
     })
-    console.log(`3/6. Load and parse individual embeddings ...`)
+    console.log(`3/7. Load and parse individual embeddings ...`)
     // 3. load embeddings reports
     // note variable names being reused, no need to re-declare them
     response = await fetch('https://epiverse.github.io/tcgapath/embeddings.tsv.zip')
@@ -52,7 +52,7 @@ async function loadTCGAreports(url='https://raw.githubusercontent.com/jkefeli/tc
     rows.forEach(function(row,i){
         reps[i].embeddings=row.split('\t').map(JSON.parse)
     })
-    console.log(`4/6. Load and assign pathology slide ids to patients ... almost there, wait for 6/6 ...`)
+    console.log(`4/7. Load and assign pathology slide ids to patients ... almost there, wait for 6/7 ...`)
     // 4. load whole slide images (wsi)
     response = await fetch('https://epiverse.github.io/tcgapath/wsi.json.zip')
     data = response.arrayBuffer()
@@ -83,7 +83,7 @@ async function loadTCGAreports(url='https://raw.githubusercontent.com/jkefeli/tc
             }
         }
     })
-    console.log(`... 5/6 done, TCGA reports assembled in (${(Date.now()-tic)/1000} secs)`)
+    console.log(`... 5/7 done, TCGA reports assembled in (${(Date.now()-tic)/1000} secs)`)
     console.log('QAQC: reports with 5+ svs images',multipleImages)
 
 
@@ -108,7 +108,28 @@ async function loadTCGAreports(url='https://raw.githubusercontent.com/jkefeli/tc
         //console.log(`match:`,repId)
     })
 
-	console.log(`6/6 vaidated with TCGA Metadata`)
+	console.log(`6/7 validated with TCGA Metadata`)
+	let dtLee = (await (await fetch('https://raw.githubusercontent.com/epiverse/tcgapath/refs/heads/main/gdc_tcga_reports_verbose.json')).json()).data.hits
+	let idLee = dtLee.map(function(x){
+    let checkFileName = x.file_name.match(/^TCGA-[\w]+-\w+/)
+       if(checkFileName){
+            return checkFileName[0]
+       }else{
+            return false
+       }
+    })
+
+	// populate individual reports with Lee's digest
+	
+	reps.forEach((ri,i)=>{ // for each TCGA Report
+		// check id match
+		if((idLee.filter((id,j)=>(id==ri.patient_id))).length==1){
+			reps[i].catalog=dtLee[idLee.indexOf(ri.patient_id)] // unfinished
+		}else{
+			console.log(`${ri.patient_id} missaligned`)
+		}
+	})
+	console.log(`7/7 Demographic and other data extracted from Lee's catalog digest, we're done here :-)`)
     return reps
 }
 
