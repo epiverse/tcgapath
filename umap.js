@@ -180,7 +180,7 @@ async function mainUMAP(nComponents = 3) {
         // Fetch embeddings and cancer type metadata
         const [embeddings, cancerTypes] = await Promise.all([fetchEmbeddings(), fetchCancerTypeMeta()]);
 
-        // Check if PCA Euclidean data is available
+        // Check if UMAP data is available
         const umappoints = await fetchumap();
 
         let umapResult;
@@ -189,7 +189,7 @@ async function mainUMAP(nComponents = 3) {
             console.log("Using UMAP data from JSON file.");
             umapResult = umappoints;
         } else {
-            console.log("UMAP data not found. Calculating PCA.");
+            console.log("UMAP data not found. Calculating UMAP.");
             umapResult = await computeUMAP(embeddings, nComponents);
         }
 
@@ -201,7 +201,7 @@ async function mainUMAP(nComponents = 3) {
         console.log("UMAP result:", umapResult);
 
         // Visualize the result with color coding
-        create3DPlot(umapResult, cancerTypes);
+        create3DUMAPPlot(umapResult, cancerTypes);
     } catch (error) {
         console.error("Error:", error);
     }

@@ -1,25 +1,26 @@
+const CANCER_TYPE_META_URL = "https://raw.githubusercontent.com/epiverse/tcgapath/main/cancer_type_meta.tsv";
+const EMBEDDINGS_URL = "https://raw.githubusercontent.com/epiverse/tcgapath/main/embeddings.tsv.zip";
+const PCA_EUCLIDEAN_JSON_URL = "https://raw.githubusercontent.com/epiverse/tcgapath/main/pca_euclidean.json";
+const UMAP_JSON_URL = "https://raw.githubusercontent.com/epiverse/tcgapath/main/umap_points.json";
 const TSNE_JSON_URL = "https://raw.githubusercontent.com/epiverse/tcgapath/main/tsne_points.json";
 
-// Function to fetch tsne data from the tsne_points.json file
-async function fetchtsne() {
+// Function to fetch data from a JSON file
+async function fetchData(url) {
     try {
-        const response = await fetch(TSNE_JSON_URL);
+        const response = await fetch(url);
         if (!response.ok) {
-            throw new Error(`Failed to fetch tsne file. HTTP Status: ${response.status}`);
+            throw new Error(`Failed to fetch file. HTTP Status: ${response.status}`);
         }
-        console.log("Successfully fetched tsne file.");
-
-        const content = await response.json();
-        return content;
+        console.log(`Successfully fetched file from ${url}.`);
+        return await response.json();
     } catch (error) {
-        console.error("Error fetching tsne file:", error);
+        console.error(`Error fetching file from ${url}:`, error);
         return null;
     }
 }
 
 // Function to fetch and unzip the embeddings file
 async function fetchEmbeddings() {
-    const EMBEDDINGS_URL = "https://raw.githubusercontent.com/epiverse/tcgapath/main/embeddings.tsv.zip";
     try {
         const response = await fetch(EMBEDDINGS_URL);
         if (!response.ok) {
@@ -37,32 +38,15 @@ async function fetchEmbeddings() {
         }
 
         const content = await file.async('string');
-        const embeddings = content.trim().split("\n").map(line => line.split("\t").map(Number));
-
-        return embeddings;
+        return content.trim().split("\n").map(line => line.split("\t").map(Number));
     } catch (error) {
         console.error("Error fetching and unzipping embeddings file:", error);
         throw error;
     }
 }
 
-// Function to download data as a JSON file
-function downloadJSON(data, filename) {
-    const jsonData = JSON.stringify(data, null, 2);
-    const blob = new Blob([jsonData], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = filename;
-    a.click();
-
-    URL.revokeObjectURL(url);
-}
-
 // Function to fetch the cancer type metadata
 async function fetchCancerTypeMeta() {
-    const CANCER_TYPE_META_URL = "https://raw.githubusercontent.com/epiverse/tcgapath/main/cancer_type_meta.tsv";
     try {
         const response = await fetch(CANCER_TYPE_META_URL);
         if (!response.ok) {
@@ -72,13 +56,63 @@ async function fetchCancerTypeMeta() {
 
         const content = await response.text();
         const lines = content.trim().split("\n");
-        const cancerTypes = lines.slice(1).map(line => line.split("\t")[1]); // Extract cancer types
-
-        return cancerTypes;
+        return lines.slice(1).map(line => line.split("\t")[1]); // Extract cancer types
     } catch (error) {
         console.error("Error fetching cancer type meta file:", error);
         throw error;
     }
+}
+
+// Function to initialize Pyodide for 3D PCA
+async function initializePyodide3D() {
+    if (typeof loadPyodide === "undefined") {
+        throw new Error("Pyodide is not loaded. Check if the script is correctly included.");
+    }
+
+    const pyodide = await loadPyodide({
+        indexURL: "https://cdn.jsdelivr.net/pyodide/v0.26.3/full/",
+    });
+    await pyodide.loadPackage("scikit-learn");
+    console.log("Pyodide initialized successfully for 3D PCA.");
+    return pyodide;
+}
+
+// Function to perform 3D PCA transformation using Pyodide
+async function pcaTransform3D(pyodide, data, nComponents = 3) {
+    const jsonData = JSON.stringify(data);
+    pyodide.globals.set("X_json", jsonData);
+    pyodide.globals.set("n_components", nComponents);
+    const transformedData = pyodide.runPython(`
+        import json
+        import numpy as np
+        from sklearn.decomposition import PCA
+
+        X = np.array(json.loads(X_json))
+        if X.ndim != 2:
+            raise ValueError('Input data must be a 2D array.')
+        del X_json
+
+        pca = PCA(n_components=n_components)
+        X_transformed = pca.fit_transform(X).tolist()
+
+        X_transformed
+    `);
+    console.log("3D PCA transformation completed:", transformedData);
+    return transformedData.toJs();
+}
+
+// Function to compute UMAP on the embeddings
+async function computeUMAP(embeddings, nComponents = 3) {
+    const umap = new UMAP.UMAP({
+        nComponents: nComponents,
+        nNeighbors: 15,
+        minDist: 0.1
+    });
+
+    console.log("Computing UMAP embeddings...");
+    const umapEmbedding = await umap.fit(embeddings);
+    console.log("UMAP embedding computation completed.");
+    return umapEmbedding;
 }
 
 // Function to perform t-SNE using the TSNE class
@@ -104,16 +138,15 @@ async function performTSNE(vectors, dim) {
     return tsne.getSolution();
 }
 
-
 // Function to create a 3D plot with points colored by cancer type
-function create3DPlot(tsneResult, cancerTypes, containerId = 'tsnePlot', plotSize = 800) {
+function create3DPlot(data, cancerTypes, containerId, plotSize, plotTitle) {
     const container = document.getElementById(containerId);
     if (!container) {
         console.error(`Container with ID '${containerId}' not found.`);
         return;
     }
 
-    container.innerHTML = '';
+    container.innerHTML = `<h3>${plotTitle}</h3>`;
 
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(75, 1, 0.1, 1000);
@@ -136,7 +169,7 @@ function create3DPlot(tsneResult, cancerTypes, containerId = 'tsnePlot', plotSiz
         colorMap[type] = color;
     });
 
-    tsneResult.forEach((point, index) => {
+    data.forEach((point, index) => {
         points.push(...point);
         const color = colorMap[cancerTypes[index]] || new THREE.Color(0x999999); // Default gray for unknown types
         colors.push(color.r, color.g, color.b);
@@ -184,41 +217,42 @@ function create3DPlot(tsneResult, cancerTypes, containerId = 'tsnePlot', plotSiz
     legend.innerHTML = `<ul>${legendContent}</ul>`;
 }
 
-async function main(nComponents = 3) {
+// Main function to execute the PCA, UMAP, t-SNE and plotting
+async function main() {
     try {
         console.log("Starting main process...");
 
         // Fetch embeddings and cancer type metadata
         const [embeddings, cancerTypes] = await Promise.all([fetchEmbeddings(), fetchCancerTypeMeta()]);
 
-        console.log("Embeddings fetched:", embeddings.length);
-        console.log("Cancer types fetched:", cancerTypes.length);
+        // Fetch data from JSON files
+        const [pcaEuclidean, umapData, tsneData] = await Promise.all([
+            fetchData(PCA_EUCLIDEAN_JSON_URL),
+            fetchData(UMAP_JSON_URL),
+            fetchData(TSNE_JSON_URL)
+        ]);
 
-        // Check if TSNE data is available
-        const tsnepoints = await fetchtsne();
+        // Initialize Pyodide for PCA
+        const pyodide = await initializePyodide3D();
 
-        let tsneResult;
+        // Compute or fetch PCA result
+        const pcaResult = pcaEuclidean ? pcaEuclidean : await pcaTransform3D(pyodide, embeddings, 3);
 
-        if (tsnepoints) {
-            console.log("Using TSNE data from JSON file.");
-            tsneResult = tsnepoints;
-        } else {
-            console.log("TSNE data not found. Calculating TSNE.");
-            const tsneResult = performTSNE(embeddings, 3);
+        // Compute or fetch UMAP result
+        const umapResult = umapData ? umapData : await computeUMAP(embeddings, 3);
+
+        // Compute or fetch t-SNE result
+        const tsneResult = tsneData ? tsneData : await performTSNE(embeddings, 3);
+
+        // Validate results
+        if (!pcaResult || !umapResult || !tsneResult) {
+            throw new Error("Error in computing PCA, UMAP, or t-SNE result.");
         }
 
-        // Check if t-SNE result is valid
-        if (!tsneResult || tsneResult.length === 0) {
-            throw new Error("t-SNE computation returned no valid data.");
-        }
-
-        console.log("t-SNE result:", tsneResult);
-
-        // Visualize the result with color coding
-        create3DPlot(tsneResult, cancerTypes);
-
-        // Download tsne points as JSON (if needed)
-        downloadJSON(tsneResult, 'tsne_points.json');
+        // Visualize the results with color coding
+        create3DPlot(pcaResult, cancerTypes, 'pcaPlot', 700, '');
+        create3DPlot(umapResult, cancerTypes, 'umapPlot', 700, '');
+        create3DPlot(tsneResult, cancerTypes, 'tsnePlot', 700, '');
 
     } catch (error) {
         console.error("Error:", error);

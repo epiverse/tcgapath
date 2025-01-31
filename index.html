@@ -14,6 +14,7 @@
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
     <script type=module src="https://cdn.jsdelivr.net/npm/tsne@1.0.1/tsne.min.js"></script>
 
+
     <title>TCGA Path</title>
     <style>
         body {
@@ -163,12 +164,12 @@
         <div id="plotButtons" class="hidden">
             <button class="glow-on-hover" onclick="showPlot('pcaPlot')">PCA Plot</button>
             <button class="glow-on-hover" onclick="showPlot('umapPlot')">UMAP Plot</button>
-            <button class="glow-on-hover" onclick="showPlot('tsnePlot')">t-SNE Plot</button> <!-- Added button for t-SNE -->
+            <button class="glow-on-hover" onclick="showPlot('tsnePlot')">t-SNE Plot</button>
         </div>
         <div id="plotContainer">
-            <div id="pcaPlot"></div>
-            <div id="umapPlot"></div>
-            <div id="tsnePlot"></div>
+            <div id="pcaPlot" style="display: none;"></div>
+            <div id="umapPlot" style="display: none;"></div>
+            <div id="tsnePlot" style="display: none;"></div>
         </div>
         <div id="legend">
             <ul>
@@ -188,15 +189,13 @@
 
     <div id="loadingMessage">Computing embeddings...</div>
 
-    <script src="pca3d.js" defer></script>
-    <script src="umap.js" defer></script>
-    <script src="tsne.js" defer></script>
+    <script src="visualization.js" defer></script>
     <script>
         function showPlot(plotId) {
-            document.getElementById('pcaPlot').style.display = 'none';
-            document.getElementById('umapPlot').style.display = 'none';
-            document.getElementById('tsnePlot').style.display = 'none'; // Hide t-SNE plot
-            document.getElementById(plotId).style.display = 'block';
+            const plots = ['pcaPlot', 'umapPlot', 'tsnePlot'];
+            plots.forEach(id => {
+                document.getElementById(id).style.display = (id === plotId) ? 'block' : 'none';
+            });
         }
 
         function showLoadingMessage(show) {
@@ -213,15 +212,12 @@
         // Simulate embedding computation
         async function computeEmbeddings() {
             showLoadingMessage(true);
-            await new Promise(resolve => setTimeout(resolve, 3000)); // Simulate computation
+            await main(); // Call the main function from the combined JavaScript file
             startLoading();
         }
 
         // Simulate computation on page load
         window.onload = computeEmbeddings;
-
-        // Show PCA plot by default
-        showPlot('pcaPlot');
     </script>
 </body>
 </html>
