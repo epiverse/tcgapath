@@ -232,27 +232,52 @@ async function main() {
             fetchData(TSNE_JSON_URL)
         ]);
 
-        // Initialize Pyodide for PCA
-        const pyodide = await initializePyodide3D();
+        let pcaResult, umapResult, tsneResult;
 
-        // Compute or fetch PCA result
-        const pcaResult = pcaEuclidean ? pcaEuclidean : await pcaTransform3D(pyodide, embeddings, 3);
-
-        // Compute or fetch UMAP result
-        const umapResult = umapData ? umapData : await computeUMAP(embeddings, 3);
-
-        // Compute or fetch t-SNE result
-        const tsneResult = tsneData ? tsneData : await performTSNE(embeddings, 3);
-
-        // Validate results
-        if (!pcaResult || !umapResult || !tsneResult) {
-            throw new Error("Error in computing PCA, UMAP, or t-SNE result.");
+        // PCA
+        if (pcaEuclidean) {
+            console.log("Using PCA Euclidean data from JSON file.");
+            pcaResult = pcaEuclidean;
+        } else {
+            console.log("PCA Euclidean data not found. Calculating PCA.");
+            const pyodide = await initializePyodide3D();
+            pcaResult = await pcaTransform3D(pyodide, embeddings, 3);
         }
+        if (!pcaResult || pcaResult.length === 0) {
+            throw new Error("PCA computation returned no valid data.");
+        }
+        console.log("PCA result:", pcaResult);
+
+        // UMAP
+        if (umapData) {
+            console.log("Using UMAP data from JSON file.");
+            umapResult = umapData;
+        } else {
+            console.log("UMAP data not found. Calculating UMAP.");
+            umapResult = await computeUMAP(embeddings, 3);
+        }
+        if (!umapResult || umapResult.length === 0) {
+            throw new Error("UMAP computation returned no valid data.");
+        }
+        console.log("UMAP result:", umapResult);
+
+        // t-SNE
+        if (tsneData) {
+            console.log("Using t-SNE data from JSON file.");
+            tsneResult = tsneData;
+        } else {
+            console.log("t-SNE data not found. Calculating t-SNE.");
+            tsneResult = await performTSNE(embeddings, 3);
+        }
+        if (!tsneResult || tsneResult.length === 0) {
+            throw new Error("t-SNE computation returned no valid data.");
+        }
+        console.log("t-SNE result:", tsneResult);
 
         // Visualize the results with color coding
-        create3DPlot(pcaResult, cancerTypes, 'pcaPlot', 700, '');
-        create3DPlot(umapResult, cancerTypes, 'umapPlot', 700, '');
-        create3DPlot(tsneResult, cancerTypes, 'tsnePlot', 700, '');
+        create3DPlot(pcaResult, cancerTypes, 'pcaPlot', 700, 'PCA Plot');
+        create3DPlot(umapResult, cancerTypes, 'umapPlot', 700, 'UMAP Plot');
+        create3DPlot(tsneResult, cancerTypes, 'tsnePlot', 700, 't-SNE Plot');
 
     } catch (error) {
         console.error("Error:", error);
