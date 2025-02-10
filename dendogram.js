@@ -60,29 +60,90 @@ function groupEmbeddingsByCancerType(embeddings, cancerTypes) {
         }
         grouped[type].push(embedding);
     });
-
-    const averageEmbeddings = {};
-    for (const type in grouped) {
-        const typeEmbeddings = grouped[type];
-        const averageEmbedding = typeEmbeddings[0].map((_, i) => d3.mean(typeEmbeddings, embedding => embedding[i]));
-        averageEmbeddings[type] = averageEmbedding;
-    }
-
-    return averageEmbeddings;
+    return grouped;
 }
 
-function getPearsonCorrelationMatrixBetweenTypes(averageEmbeddings) {
-    const types = Object.keys(averageEmbeddings);
-    const n = types.length;
-    const correlationMatrix = Array.from({ length: n }, () => Array(n).fill(0));
+function renderCorrelationMatrix(meanCorrelations) {
+    const container = d3.select("#correlationMatrix");
 
-    for (let i = 0; i < n; i++) {
-        for (let j = 0; j < n; j++) {
-            console.log(averageEmbeddings[types[i]]);
-            correlationMatrix[i][j] = corr(averageEmbeddings[types[i]], averageEmbeddings[types[j]]);
+    // Clear previous content
+    container.selectAll("*").remove();
+
+    const table = container.append("table").attr("class", "correlation-table");
+    const thead = table.append("thead");
+    const tbody = table.append("tbody");
+
+    // Create table header
+    const headerRow = thead.append("tr");
+    headerRow.append("th").text("Cancer Types");
+    const types = Object.keys(meanCorrelations);
+    types.forEach(type => {
+        headerRow.append("th").text(type);
+    });
+
+    // Create table body
+    types.forEach((type, i) => {
+        const row = tbody.append("tr");
+        row.append("th").text(type);
+        types.forEach((otherType, j) => {
+            const correlation = meanCorrelations[type] && meanCorrelations[type][otherType];
+            row.append("td")
+                .attr("class", "correlation-cell")
+                .text(correlation !== undefined ? correlation.toFixed(2) : "--");  // Display correlation value rounded to two decimal places or '--' if undefined
+        });
+    });
+}
+
+// Function to download data as a JSON file
+function downloadJSON(data, filename) {
+    const jsonData = JSON.stringify(data, null, 2);
+    const blob = new Blob([jsonData], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.click();
+
+    URL.revokeObjectURL(url);
+}
+
+function getMeanCorrelationBetweenTypes(groupedEmbeddings) {
+    const types = Object.keys(groupedEmbeddings);
+    const meanCorrelations = {};
+
+    for (let i = 0; i < types.length; i++) {
+        for (let j = i; j < types.length; j++) {
+            const type1 = types[i];
+            const type2 = types[j];
+            const embeddings1 = groupedEmbeddings[type1];
+            const embeddings2 = groupedEmbeddings[type2];
+            const n1 = embeddings1.length;
+            const n2 = embeddings2.length;
+            let totalCorrelation = 0;
+            let count = 0;
+
+            if (type1 === type2) {
+                meanCorrelations[type1] = meanCorrelations[type1] || {};
+                meanCorrelations[type1][type2] = 1;  // Set the main diagonal to 1
+                continue;
+            }
+
+            for (let m = 0; m < n1; m++) {
+                for (let n = 0; n < n2; n++) {
+                    totalCorrelation += corr(embeddings1[m], embeddings2[n]);
+                    count++;
+                }
+            }
+
+            const meanCorrelation = count > 0 ? totalCorrelation / count : 0;
+            meanCorrelations[type1] = meanCorrelations[type1] || {};
+            meanCorrelations[type2] = meanCorrelations[type2] || {};
+            meanCorrelations[type1][type2] = meanCorrelation;
+            meanCorrelations[type2][type1] = meanCorrelation;  // Mirror the values below the main diagonal
         }
     }
-    return { types, correlationMatrix };
+    return meanCorrelations;
 }
 
 function colElbow(d) {
@@ -102,57 +163,83 @@ function colElbow(d) {
             H${targetY}`;
 }
 
-function renderCorrelationMatrix(types, correlationMatrix) {
-    const container = d3.select("#correlationMatrix");
+// Function to load the correlation matrix from a JSON file
+async function loadCorrelationMatrixFromFile(filename) {
+    try {
+        const response = await fetch(filename);
+        if (!response.ok) {
+            throw new Error(`Failed to fetch the correlation matrix file. HTTP Status: ${response.status}`);
+        }
+        const jsonData = await response.json();
+        console.log("Successfully loaded correlation matrix from file.");
+        return jsonData;
+    } catch (error) {
+        console.error("Error loading correlation matrix file:", error);
+        return null;
+    }
+}
 
-    // Clear previous content
-    container.selectAll("*").remove();
-
-    const table = container.append("table").attr("class", "correlation-table");
-    const thead = table.append("thead");
-    const tbody = table.append("tbody");
-
-    // Create table header
-    const headerRow = thead.append("tr");
-    headerRow.append("th").text("Cancer Types");
-    types.forEach(type => {
-        headerRow.append("th").text(type);
-    });
-
-    // Create table body
-    types.forEach((type, i) => {
-        const row = tbody.append("tr");
-        row.append("th").text(type);
-        correlationMatrix[i].forEach(value => {
-            row.append("td")
-                .attr("class", "correlation-cell")
-                .text(value.toFixed(2));  // Display correlation value rounded to two decimal places
-        });
-    });
+// Function to load the correlation matrix from a JSON file
+async function loadCorrelationMatrixFromFile(filename) {
+    try {
+        const response = await fetch(filename);
+        if (!response.ok) {
+            throw new Error(`Failed to fetch the correlation matrix file. HTTP Status: ${response.status}`);
+        }
+        const jsonData = await response.json();
+        console.log("Successfully loaded correlation matrix from file.");
+        return jsonData;
+    } catch (error) {
+        console.error("Error loading correlation matrix file:", error);
+        return null;
+    }
 }
 
 async function createDendrogramAndCorrelationMatrix() {
-    const [embeddings, cancerTypes] = await Promise.all([
-        fetchEmbeddings(),
-        fetchCancerTypeMeta()
-    ]);
+    const data = await loadCorrelationMatrixFromFile('correlationmatrix.json');
+    let meanCorrelations;
 
-    const averageEmbeddings = groupEmbeddingsByCancerType(embeddings, cancerTypes);
-    const { types, correlationMatrix } = getPearsonCorrelationMatrixBetweenTypes(averageEmbeddings);
+    if (data && data.types && data.correlationMatrix) {
+        const { types, correlationMatrix } = data;
 
-    console.log("Correlation Matrix:", correlationMatrix);
+        meanCorrelations = types.reduce((acc, type, i) => {
+            acc[type] = {};
+            types.forEach((otherType, j) => {
+                acc[type][otherType] = correlationMatrix[i][j];
+            });
+            return acc;
+        }, {});
 
-    renderCorrelationMatrix(types, correlationMatrix);
+        console.log("Using correlation matrix from file:", meanCorrelations);
+    } else {
+        console.log("Correlation matrix file not found. Calculating matrix.");
+        const [embeddings, cancerTypes] = await Promise.all([
+            fetchEmbeddings(),
+            fetchCancerTypeMeta()
+        ]);
+
+        const groupedEmbeddings = groupEmbeddingsByCancerType(embeddings, cancerTypes);
+        meanCorrelations = getMeanCorrelationBetweenTypes(groupedEmbeddings);
+
+        console.log("Mean Correlations:", meanCorrelations);
+
+        renderCorrelationMatrix(meanCorrelations);
+
+        // Download mean correlations as JSON file
+        downloadJSON(meanCorrelations, "mean_correlations.json");
+    }
+
+    renderCorrelationMatrix(meanCorrelations);
 
     // Create hierarchical data structure
     const hierarchicalData = {
         name: "root",
-        children: types.map((type, i) => ({
+        children: Object.keys(meanCorrelations).map(type => ({
             name: type,
-            children: correlationMatrix[i].map((value, j) => ({
-                name: types[j],
-                value
-            })).filter((child, index) => index !== i)
+            children: Object.keys(meanCorrelations[type]).map(otherType => ({
+                name: otherType,
+                value: meanCorrelations[type][otherType]
+            }))
         }))
     };
 
