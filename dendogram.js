@@ -196,11 +196,21 @@ async function loadCorrelationMatrixFromFile(filename) {
 }
 
 async function createDendrogramAndCorrelationMatrix() {
+    // Load Pyodide
+    const pyodide = await loadPyodide({
+        indexURL: 'https://cdn.jsdelivr.net/pyodide/v0.26.3/full/'
+    });
+
+    await pyodide.loadPackage('numpy');
+    await pyodide.loadPackage('scipy');
+
     const data = await loadCorrelationMatrixFromFile('correlationmatrix.json');
     let meanCorrelations;
+    let types;
 
     if (data && data.types && data.correlationMatrix) {
-        const { types, correlationMatrix } = data;
+        types = data.types;
+        const correlationMatrix = data.correlationMatrix;
 
         meanCorrelations = types.reduce((acc, type, i) => {
             acc[type] = {};
@@ -220,71 +230,111 @@ async function createDendrogramAndCorrelationMatrix() {
 
         const groupedEmbeddings = groupEmbeddingsByCancerType(embeddings, cancerTypes);
         meanCorrelations = getMeanCorrelationBetweenTypes(groupedEmbeddings);
+        types = Object.keys(meanCorrelations);
 
         console.log("Mean Correlations:", meanCorrelations);
 
         renderCorrelationMatrix(meanCorrelations);
 
         // Download mean correlations as JSON file
-        downloadJSON(meanCorrelations, "mean_correlations.json");
+        downloadJSON({ types, correlationMatrix: types.map(type => types.map(otherType => meanCorrelations[type][otherType])) }, "mean_correlations.json");
     }
 
     renderCorrelationMatrix(meanCorrelations);
 
-    // Create hierarchical data structure
-    const hierarchicalData = {
-        name: "root",
-        children: Object.keys(meanCorrelations).map(type => ({
-            name: type,
-            children: Object.keys(meanCorrelations[type]).map(otherType => ({
-                name: otherType,
-                value: meanCorrelations[type][otherType]
-            }))
-        }))
-    };
+    // Convert the mean correlations to distances
+    const distanceMatrix = types.map(type =>
+        types.map(otherType => 1 - meanCorrelations[type][otherType])
+    );
 
-    console.log("Hierarchical Data:", hierarchicalData);
+    const jsonData = JSON.stringify(distanceMatrix);
+    pyodide.globals.set("distance_matrix_json", jsonData);
 
-    const width = 1000;
-    const height = 700;
+    await pyodide.runPythonAsync(`
+        import json
+        import numpy as np
+        from scipy.spatial.distance import squareform
+        from scipy.cluster.hierarchy import linkage, to_tree
+
+        # Load the distance matrix
+        distance_matrix = np.array(json.loads(distance_matrix_json))
+        print("Distance Matrix:\\n", distance_matrix)
+
+        # Convert to condensed distance matrix
+        condensed_distance_matrix = squareform(distance_matrix)
+        print("Condensed Distance Matrix:\\n", condensed_distance_matrix)
+
+        # Perform hierarchical clustering
+        Z = linkage(condensed_distance_matrix, 'complete')
+        print("Linkage Matrix:\\n", Z)
+
+        # Convert to tree structure
+        root, _ = to_tree(Z, rd=True)
+
+        # Function to convert tree to D3 hierarchy
+        def to_d3_hierarchy(node):
+            if not node.is_leaf():
+                return {
+                    'name': "",
+                    'children': [to_d3_hierarchy(node.get_left()), to_d3_hierarchy(node.get_right())]
+                }
+            return {'name': str(node.id)}
+
+        # Convert root node to D3 hierarchy
+        hierarchy_data = to_d3_hierarchy(root)
+        print("Hierarchy Data:\\n", hierarchy_data)
+    `);
+
+    const hierarchyData = pyodide.globals.get("hierarchy_data").toJs();
+    console.log("Hierarchy Data:", hierarchyData);
+
+    const width = 2000;
+    const height = 2000;
 
     const svg = d3.select("#dendrogramContainer")
         .append("svg")
         .attr("width", width)
-        .attr("height", height);
+        .attr("height", height)
+        .call(d3.zoom().on("zoom", (event) => {
+            svg.attr("transform", event.transform);
+        }))
+        .append("g")
+        .attr("transform", "translate(50,50)");
 
-    const root = d3.hierarchy(hierarchicalData, d => d.children);
+    const root = d3.hierarchy(hierarchyData, d => d.children);
 
     const tree = d3.cluster()
-        .size([height - 160, width - 160]);
+        .size([height - 200, width - 200]);
 
     tree(root);
 
-    const link = svg.append("g")
-        .selectAll(".link")
+    // Link elements
+    svg.selectAll(".link")
         .data(root.descendants().slice(1))
         .enter().append("path")
         .attr("class", "link")
-        .attr("d", d => colElbow(d));
+        .attr("d", d => `
+            M${d.parent.y},${d.parent.x}
+            V${d.x}
+            H${d.y}
+        `)
+        .style("stroke", "black"); // Ensure link color
 
-    const node = svg.append("g")
-        .selectAll(".node")
+    // Node elements
+    svg.selectAll(".node")
         .data(root.descendants())
         .enter().append("g")
         .attr("class", "node")
-        .attr("transform", d => `translate(${d.y},${d.x})`);
-
-    node.append("circle")
-        .attr("r", 4.5);
-
-    node.append("text")
-        .attr("dy", "0.31em")
-        .attr("x", d => d.children ? -10 : 10)
-        .style("text-anchor", d => d.children ? "end" : "start")
-        .style("font-size", "12px")
-        .text(d => d.data.name)
-        .clone(true).lower()
-        .attr("stroke", "white");
+        .attr("transform", d => `translate(${d.y},${d.x})`)
+        .each(function(d) {
+            d3.select(this).append("circle").attr("r", 4);
+            d3.select(this).append("text")
+                .attr("dy", "0.31em")
+                .attr("x", d => d.children ? -10 : 10)
+                .style("text-anchor", d => d.children ? "end" : "start")
+                .style("font-size", "10px")
+                .text(d => types[+d.data.name]);
+        });
 
     return svg.node();
 }
