@@ -221,6 +221,7 @@ async function createDendrogramAndCorrelationMatrix() {
         }, {});
 
         console.log("Using correlation matrix from file:", meanCorrelations);
+        console.log("Types Array:", types);
     } else {
         console.log("Correlation matrix file not found. Calculating matrix.");
         const [embeddings, cancerTypes] = await Promise.all([
@@ -233,6 +234,7 @@ async function createDendrogramAndCorrelationMatrix() {
         types = Object.keys(meanCorrelations);
 
         console.log("Mean Correlations:", meanCorrelations);
+        console.log("Types Array:", types);
 
         renderCorrelationMatrix(meanCorrelations);
 
@@ -302,11 +304,21 @@ async function createDendrogramAndCorrelationMatrix() {
         .attr("transform", "translate(50,50)");
 
     const root = d3.hierarchy(hierarchyData, d => d.children);
+    console.log("Root Data:", root);
 
-    const tree = d3.cluster()
-        .size([height - 200, width - 200]);
+    const treeLayout = d3.tree()
+        .size([height - 200, width - 200])
+        .separation((a, b) => a.parent == b.parent ? 1 : 2); // Increase separation between nodes
 
-    tree(root);
+    treeLayout(root);
+    console.log("Tree Layout:", root);
+
+    // Detailed logging of node positions and names
+    root.each(node => {
+        const nodeId = node.data.name;
+        const cancerTypeName = types[+nodeId] || "Unknown";
+        console.log(`Node: ${nodeId}, Cancer Type: ${cancerTypeName}, x: ${node.x}, y: ${node.y}`);
+    });
 
     // Link elements
     svg.selectAll(".link")
@@ -314,27 +326,33 @@ async function createDendrogramAndCorrelationMatrix() {
         .enter().append("path")
         .attr("class", "link")
         .attr("d", d => `
-            M${d.parent.y},${d.parent.x}
-            V${d.x}
-            H${d.y}
+            M${d.y},${d.x}
+            V${d.parent.x}
+            H${d.parent.y}
         `)
         .style("stroke", "black"); // Ensure link color
+    console.log("Links Added");
 
-    // Node elements
+    // Node elements with additional debugging
     svg.selectAll(".node")
         .data(root.descendants())
         .enter().append("g")
         .attr("class", "node")
         .attr("transform", d => `translate(${d.y},${d.x})`)
         .each(function(d) {
+            console.log("Node:", d);
             d3.select(this).append("circle").attr("r", 4);
+            const nodeId = d.data.name;
+            const cancerTypeName = types[+nodeId] || "Unknown";
+            console.log(`Cancer Type Name: ${cancerTypeName}`);
             d3.select(this).append("text")
                 .attr("dy", "0.31em")
                 .attr("x", d => d.children ? -10 : 10)
                 .style("text-anchor", d => d.children ? "end" : "start")
                 .style("font-size", "10px")
-                .text(d => types[+d.data.name]);
+                .text(cancerTypeName);
         });
+    console.log("Nodes Added");
 
     return svg.node();
 }
