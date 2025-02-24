@@ -146,6 +146,79 @@ function getMeanCorrelationBetweenTypes(groupedEmbeddings) {
     return meanCorrelations;
 }
 
+function spearmanCorr(x, y) {
+    const n = x.length;
+    if (y.length !== n) throw new Error("The two vectors must have the same length.");
+
+    // Function to rank an array (handle ties using average ranking)
+    function rankArray(arr) {
+        const sorted = [...arr].map((val, i) => ({ val, i })).sort((a, b) => a.val - b.val);
+        const ranks = new Array(n);
+        let rank = 1;
+
+        for (let i = 0; i < sorted.length; i++) {
+            if (i > 0 && sorted[i].val === sorted[i - 1].val) {
+                rank = (ranks[sorted[i - 1].i] + rank) / 2;
+            }
+            ranks[sorted[i].i] = rank;
+            rank++;
+        }
+
+        return ranks;
+    }
+
+    // Rank both vectors
+    const rankX = rankArray(x);
+    const rankY = rankArray(y);
+
+    // Compute Pearson correlation on ranked data
+    const x_ = d3.mean(rankX);
+    const y_ = d3.mean(rankY);
+    const XY = d3.sum(rankX, (_, i) => (rankX[i] - x_) * (rankY[i] - y_));
+    const XX = d3.sum(rankX, d => (d - x_) ** 2);
+    const YY = d3.sum(rankY, d => (d - y_) ** 2);
+
+    return XY / Math.sqrt(XX * YY);
+}
+
+function getMeanSpearmanBetweenTypes(groupedEmbeddings) {
+    const types = Object.keys(groupedEmbeddings);
+    const meanSpearmanCorrelations = {};
+
+    for (let i = 0; i < types.length; i++) {
+        for (let j = i; j < types.length; j++) {
+            const type1 = types[i];
+            const type2 = types[j];
+            const embeddings1 = groupedEmbeddings[type1];
+            const embeddings2 = groupedEmbeddings[type2];
+            const n1 = embeddings1.length;
+            const n2 = embeddings2.length;
+            let totalCorrelation = 0;
+            let count = 0;
+
+            if (type1 === type2) {
+                meanSpearmanCorrelations[type1] = meanSpearmanCorrelations[type1] || {};
+                meanSpearmanCorrelations[type1][type2] = 1; // Self-correlation is always 1
+                continue;
+            }
+
+            for (let m = 0; m < n1; m++) {
+                for (let n = 0; n < n2; n++) {
+                    totalCorrelation += spearmanCorr(embeddings1[m], embeddings2[n]);
+                    count++;
+                }
+            }
+
+            const meanCorrelation = count > 0 ? totalCorrelation / count : 0;
+            meanSpearmanCorrelations[type1] = meanSpearmanCorrelations[type1] || {};
+            meanSpearmanCorrelations[type2] = meanSpearmanCorrelations[type2] || {};
+            meanSpearmanCorrelations[type1][type2] = meanCorrelation;
+            meanSpearmanCorrelations[type2][type1] = meanCorrelation;  // Mirror values for symmetry
+        }
+    }
+    return meanSpearmanCorrelations;
+}
+
 function colElbow(d) {
     const sourceX = d.source?.x ?? d.parent?.x;
     const targetX = d.target?.x ?? d.parent?.x;
@@ -179,22 +252,6 @@ async function loadCorrelationMatrixFromFile(filename) {
     }
 }
 
-// Function to load the correlation matrix from a JSON file
-async function loadCorrelationMatrixFromFile(filename) {
-    try {
-        const response = await fetch(filename);
-        if (!response.ok) {
-            throw new Error(`Failed to fetch the correlation matrix file. HTTP Status: ${response.status}`);
-        }
-        const jsonData = await response.json();
-        console.log("Successfully loaded correlation matrix from file.");
-        return jsonData;
-    } catch (error) {
-        console.error("Error loading correlation matrix file:", error);
-        return null;
-    }
-}
-
 async function createDendrogramAndCorrelationMatrix() {
     // Load Pyodide
     const pyodide = await loadPyodide({
@@ -206,6 +263,7 @@ async function createDendrogramAndCorrelationMatrix() {
 
     const data = await loadCorrelationMatrixFromFile('correlationmatrix.json');
     let meanCorrelations;
+    let meanSpearmanCorrelations;
     let types;
 
     if (data && data.types && data.correlationMatrix) {
@@ -231,18 +289,32 @@ async function createDendrogramAndCorrelationMatrix() {
 
         const groupedEmbeddings = groupEmbeddingsByCancerType(embeddings, cancerTypes);
         meanCorrelations = getMeanCorrelationBetweenTypes(groupedEmbeddings);
+        meanSpearmanCorrelations = getMeanSpearmanBetweenTypes(groupedEmbeddings);
         types = Object.keys(meanCorrelations);
 
         console.log("Mean Correlations:", meanCorrelations);
+        console.log("Mean Spearman Correlations:", meanSpearmanCorrelations);
         console.log("Types Array:", types);
 
         renderCorrelationMatrix(meanCorrelations);
+        renderSpearmanCorrelationMatrix(meanSpearmanCorrelations);
 
         // Download mean correlations as JSON file
         downloadJSON({ types, correlationMatrix: types.map(type => types.map(otherType => meanCorrelations[type][otherType])) }, "mean_correlations.json");
+        downloadJSON({ types, spearmanCorrelationMatrix: types.map(type => types.map(otherType => meanSpearmanCorrelations[type][otherType])) }, "mean_spearman_correlations.json");
     }
 
     renderCorrelationMatrix(meanCorrelations);
+
+    // Debugging log to ensure meanSpearmanCorrelations is defined
+    console.log("Mean Spearman Correlations before rendering:", meanSpearmanCorrelations);
+
+    // Check if meanSpearmanCorrelations is defined before calling the render function
+    if (meanSpearmanCorrelations) {
+        renderSpearmanCorrelationMatrix(meanSpearmanCorrelations);
+    } else {
+        console.error("Mean Spearman Correlations is undefined or null");
+    }
 
     // Convert the mean correlations to distances
     const distanceMatrix = types.map(type =>
@@ -355,6 +427,37 @@ async function createDendrogramAndCorrelationMatrix() {
     console.log("Nodes Added");
 
     return svg.node();
+}
+
+function renderSpearmanCorrelationMatrix(meanSpearmanCorrelations) {
+    const container = d3.select("#spearmanCorrelationMatrix");
+
+    // Clear previous content
+    container.selectAll("*").remove();
+
+    const table = container.append("table").attr("class", "correlation-table");
+    const thead = table.append("thead");
+    const tbody = table.append("tbody");
+
+    // Create table header
+    const headerRow = thead.append("tr");
+    headerRow.append("th").text("Cancer Types");
+    const types = Object.keys(meanSpearmanCorrelations);
+    types.forEach(type => {
+        headerRow.append("th").text(type);
+    });
+
+    // Create table body
+    types.forEach((type, i) => {
+        const row = tbody.append("tr");
+        row.append("th").text(type);
+        types.forEach((otherType, j) => {
+            const correlation = meanSpearmanCorrelations[type] && meanSpearmanCorrelations[type][otherType];
+            row.append("td")
+                .attr("class", "correlation-cell")
+                .text(correlation !== undefined ? correlation.toFixed(2) : "--");  // Display correlation value rounded to two decimal places or '--' if undefined
+        });
+    });
 }
 
 createDendrogramAndCorrelationMatrix().catch(error => {
